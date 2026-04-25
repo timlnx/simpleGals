@@ -129,3 +129,37 @@ def test_right_panel_instantiates():
     content = urwid.Text("placeholder")
     panel = RightPanel(preview, content)
     assert panel is not None
+
+
+def test_render_bar_zero_progress():
+    from simplegals.tui.progress_bar import _render_bar
+    result = _render_bar(0, 0, 4, "Previews")
+    assert "0/4" in result
+    assert "░" * 20 in result
+
+
+def test_render_bar_full_progress():
+    from simplegals.tui.progress_bar import _render_bar
+    result = _render_bar(4, 0, 4, "Output ")
+    assert "4/4" in result
+    assert "█" * 20 in result
+
+
+def test_render_bar_with_errors():
+    from simplegals.tui.progress_bar import _render_bar
+    result = _render_bar(3, 1, 4, "Output ")
+    assert "1 err" in result
+
+
+def test_build_progress_widget_shows_counts():
+    from simplegals.tui.progress_bar import BuildProgressWidget
+    widget = BuildProgressWidget(2, 0, 4, "Previews")
+    assert "2/4" in widget.text
+
+
+def test_build_progress_panel_instantiates():
+    from simplegals.tui.progress_bar import BuildProgressPanel
+    from simplegals.workers.progress import ProgressState
+    panel = BuildProgressPanel()
+    state = ProgressState(thumb_total=2, thumb_done=1, output_total=2, output_done=0)
+    panel.update(state)  # should not raise
