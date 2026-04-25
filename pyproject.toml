@@ -21,18 +21,6 @@ dependencies = [
     "pillow",
     "urwid",
 ]
-
-[project.optional-dependencies]
-dev = [
-    "pytest",
-    "pytest-cov",
-]
-docs = [
-    "sphinx",
-    "sphinx-rtd-theme",
-    "myst-parser",
-    "sphinx-autobuild",
-]
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",
     "Environment :: Console",
@@ -48,9 +36,27 @@ classifiers = [
     "Topic :: Utilities",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+]
+docs = [
+    "sphinx",
+    "sphinx-rtd-theme",
+    "myst-parser",
+    "sphinx-autobuild",
+]
+
 [project.scripts]
 simpleGals = "simplegals.cli:main"
 sgui = "simplegals.tui:main"
 
 [project.urls]
 Repository = "https://github.com/timlnx/simpleGals"
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["simplegals"]
