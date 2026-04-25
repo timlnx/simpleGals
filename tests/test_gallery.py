@@ -10,6 +10,7 @@ from simplegals.core.gallery import (
     scan_sources,
     validate,
 )
+from simplegals.workers.progress import ProgressState
 
 
 def test_ensure_project_dirs_creates_directories(tmp_path):
@@ -77,3 +78,15 @@ def test_build_appends_to_jsonl(tmp_project):
     assert jsonl.exists()
     lines = [l for l in jsonl.read_text().splitlines() if l.strip()]
     assert len(lines) >= 1
+
+
+def test_build_calls_progress_callback(tmp_project):
+    config = ProjectConfig()
+    states = []
+
+    def callback(state: ProgressState) -> None:
+        states.append(state)
+
+    build(tmp_project, config, progress_callback=callback)
+    assert len(states) > 0
+    assert all(isinstance(s, ProgressState) for s in states)

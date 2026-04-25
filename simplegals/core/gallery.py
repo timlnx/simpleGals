@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import multiprocessing
+import threading
 from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -100,12 +101,30 @@ def build(
     had_errors = False
     if thumb_tasks or output_tasks:
         q: multiprocessing.Queue = multiprocessing.Queue()
-        dispatch(thumb_tasks, output_tasks, q)
         state = ProgressState(
             thumb_total=len(thumb_tasks),
             output_total=len(output_tasks),
         )
-        state = drain_queue(q, state)
+        _done = threading.Event()
+
+        def _run_dispatch() -> None:
+            dispatch(thumb_tasks, output_tasks, q)
+            _done.set()
+
+        dispatch_thread = threading.Thread(target=_run_dispatch, daemon=True)
+        dispatch_thread.start()
+
+        while not _done.wait(timeout=0.05):
+            state = drain_queue(q, state, timeout=0.02)
+            if progress_callback:
+                progress_callback(state)
+
+        # final drain after all workers finish
+        state = drain_queue(q, state, timeout=0.1)
+        if progress_callback:
+            progress_callback(state)
+
+        dispatch_thread.join()
         log(format_cli_progress(state))
         if state.thumb_failed or state.output_failed:
             had_errors = True
