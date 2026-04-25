@@ -227,6 +227,13 @@ Thumb staleness and output staleness are tracked independently. Changing a publi
 
 There is also a `.meta/build.jsonl` build log — one JSON object appended per completed build run (timestamp, images processed, errors, duration). Grep-friendly, appendable, easy to tail. Useful for debugging "why did that take so long."
 
+Each build run also writes a timestamped plain-text build log capturing all worker output and errors: `.meta/build-<ISO8601-timestamp>.log`. This is separate from the JSONL summary and contains the full human-readable output of the build — what was processed, what failed, and why.
+
+**On build error:**
+
+- **`simpleGals` CLI**: After the worker queue bars finish, if errors occurred, print the last 20 lines of the build log to stdout with the log path. The progress bars are NOT interrupted — errors surface cleanly after they finish.
+- **`sgui`**: Display a floating modal scroll dialog over the interface. The modal title shows the full log file path. The body shows the complete build log, scrollable. The modal is dismissible with Escape.
+
 ---
 
 ## Image processing pipeline
