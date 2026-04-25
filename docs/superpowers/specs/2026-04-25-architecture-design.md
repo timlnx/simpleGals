@@ -27,7 +27,7 @@ Do NOT push simpleGals to GitHub before this sequence completes.
 
 ## Testing
 
-Tests live in `tests/` at the project root. The runner is `pytest`. Platform matrix: macOS, Linux, Windows.
+Tests live in `tests/` at the project root. The runner is `pytest`. The platform matrix runs on GitHub Actions runners: `macos-latest`, `ubuntu-latest`, and `windows-latest` — all three on every push.
 
 ```
 tests/
