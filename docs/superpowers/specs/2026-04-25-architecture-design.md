@@ -98,6 +98,25 @@ The core has no knowledge of whether a CLI or a TUI is running it. `gallery.py` 
 
 ---
 
+## CLI command verbs
+
+`simpleGals` uses subcommands rather than a flat option set. The verbs:
+
+| Verb | Description |
+|---|---|
+| `build` | Run the gallery build — process stale images, render HTML output |
+| `validate` | Check `simpleGal.json` for schema errors, verify all referenced images exist in `in/`, validate the template directory if a custom one is set |
+| `clean` | Erase all cached metadata: empties `.meta/` (sidecars, preview thumbnails, build log). Does NOT touch `out/` |
+| `--init` / `init` | Write a stub `simpleGal.json` in the current directory |
+
+All verbs accept `-c|--config <path>` to override the default `simpleGal.json` location.
+
+`clean` is destructive — the next `build` will regenerate everything from scratch. It does not touch `out/` because those are your published files; use your own judgment about whether to blow those away.
+
+`sgui` exposes the same three operations (`build`, `validate`, `clean`) via keyboard shortcuts. The specific key bindings are TBD and will be added to the keyboard reference once decided.
+
+---
+
 ## Build flow
 
 When either entry point kicks off a gallery build, the execution path is the same:
