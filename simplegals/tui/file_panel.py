@@ -21,7 +21,10 @@ class SelectableImageRow(urwid.WidgetWrap):
         self.filename = filename
         self.dirty = dirty
         self._icon = urwid.SelectableIcon(self._make_label(), cursor_position=0)
-        super().__init__(urwid.AttrMap(self._icon, None, "selected"))
+        super().__init__(self._make_attrmap())
+
+    def _make_attrmap(self) -> urwid.AttrMap:
+        return urwid.AttrMap(self._icon, "dirty" if self.dirty else None, "selected")
 
     @property
     def label(self) -> str:
@@ -33,6 +36,7 @@ class SelectableImageRow(urwid.WidgetWrap):
     def update_dirty(self, dirty: bool) -> None:
         self.dirty = dirty
         self._icon.set_text(self._make_label())
+        self._w = self._make_attrmap()
 
     def selectable(self) -> bool:
         return True

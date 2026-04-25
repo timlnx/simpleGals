@@ -323,3 +323,275 @@ def test_sgui_app_handles_invalid_panel_width(tmp_project):
     config_path = tmp_project / "simpleGal.json"
     app = SGUIApp(tmp_project, config, global_config, config_path)
     assert app is not None
+
+
+# ── dirty color indicator ──────────────────────────────────────────────────
+
+def test_selectable_image_row_dirty_applies_color_attr():
+    from simplegals.tui.file_panel import SelectableImageRow
+    import urwid
+    row = SelectableImageRow("a.jpg", dirty=True)
+    assert isinstance(row._w, urwid.AttrMap)
+    assert row._w.attr_map.get(None) == "dirty"
+
+
+def test_selectable_image_row_clean_has_no_color_attr():
+    from simplegals.tui.file_panel import SelectableImageRow
+    row = SelectableImageRow("a.jpg", dirty=False)
+    assert row._w.attr_map.get(None) is None
+
+
+def test_selectable_image_row_update_dirty_changes_attr():
+    from simplegals.tui.file_panel import SelectableImageRow
+    row = SelectableImageRow("a.jpg", dirty=False)
+    row.update_dirty(True)
+    assert row._w.attr_map.get(None) == "dirty"
+
+
+def test_selectable_image_row_update_clean_removes_attr():
+    from simplegals.tui.file_panel import SelectableImageRow
+    row = SelectableImageRow("a.jpg", dirty=True)
+    row.update_dirty(False)
+    assert row._w.attr_map.get(None) is None
+
+
+# ── _fmt_size helper ───────────────────────────────────────────────────────
+
+def test_fmt_size_bytes():
+    from simplegals.tui.preview_panel import _fmt_size
+    assert _fmt_size(512) == "512 B"
+
+
+def test_fmt_size_kilobytes():
+    from simplegals.tui.preview_panel import _fmt_size
+    assert _fmt_size(2048) == "2 KB"
+
+
+def test_fmt_size_megabytes():
+    from simplegals.tui.preview_panel import _fmt_size
+    result = _fmt_size(3 * 1024 * 1024)
+    assert "MB" in result
+
+
+# ── file size display in ImageSettingsPanel ────────────────────────────────
+
+def test_image_settings_panel_shows_source_size(tmp_path):
+    from simplegals.core.config import ProjectConfig
+    from simplegals.tui.preview_panel import ImageSettingsPanel
+    from simplegals.tui.state import StagedChangesModel
+    source = tmp_path / "a.jpg"
+    source.write_bytes(b"x" * 2048)
+    config = ProjectConfig()
+    staged = StagedChangesModel()
+    panel = ImageSettingsPanel(
+        "a.jpg", config, staged,
+        on_save=lambda: None, on_revert=lambda: None,
+        source_path=source,
+    )
+    size_widget = panel._w.contents[1][0]
+    assert "original" in size_widget.text
+    assert "2 KB" in size_widget.text
+
+
+def test_image_settings_panel_thumb_pending_when_missing(tmp_path):
+    from simplegals.core.config import ProjectConfig
+    from simplegals.tui.preview_panel import ImageSettingsPanel
+    from simplegals.tui.state import StagedChangesModel
+    source = tmp_path / "a.jpg"
+    source.write_bytes(b"x" * 100)
+    thumb = tmp_path / "a_thumb.jpg"  # does not exist
+    config = ProjectConfig()
+    staged = StagedChangesModel()
+    panel = ImageSettingsPanel(
+        "a.jpg", config, staged,
+        on_save=lambda: None, on_revert=lambda: None,
+        source_path=source, thumb_path=thumb,
+    )
+    size_widget = panel._w.contents[1][0]
+    assert "(pending)" in size_widget.text
+
+
+def test_image_settings_panel_thumb_size_when_present(tmp_path):
+    from simplegals.core.config import ProjectConfig
+    from simplegals.tui.preview_panel import ImageSettingsPanel
+    from simplegals.tui.state import StagedChangesModel
+    source = tmp_path / "a.jpg"
+    source.write_bytes(b"x" * 1024)
+    thumb = tmp_path / "a_thumb.jpg"
+    thumb.write_bytes(b"t" * 512)
+    config = ProjectConfig()
+    staged = StagedChangesModel()
+    panel = ImageSettingsPanel(
+        "a.jpg", config, staged,
+        on_save=lambda: None, on_revert=lambda: None,
+        source_path=source, thumb_path=thumb,
+    )
+    size_widget = panel._w.contents[1][0]
+    assert "thumb" in size_widget.text
+    assert "(pending)" not in size_widget.text
+
+
+def test_image_settings_panel_unknown_source_shows_question_mark():
+    from simplegals.core.config import ProjectConfig
+    from simplegals.tui.preview_panel import ImageSettingsPanel
+    from simplegals.tui.state import StagedChangesModel
+    config = ProjectConfig()
+    staged = StagedChangesModel()
+    panel = ImageSettingsPanel(
+        "a.jpg", config, staged, on_save=lambda: None, on_revert=lambda: None
+    )
+    size_widget = panel._w.contents[1][0]
+    assert "?" in size_widget.text
+
+
+# ── Tab cycling in settings panels ────────────────────────────────────────
+
+def test_image_settings_panel_tab_is_consumed():
+    from simplegals.core.config import ProjectConfig
+    from simplegals.tui.preview_panel import ImageSettingsPanel
+    from simplegals.tui.state import StagedChangesModel
+    config = ProjectConfig()
+    staged = StagedChangesModel()
+    panel = ImageSettingsPanel(
+        "a.jpg", config, staged, on_save=lambda: None, on_revert=lambda: None
+    )
+    assert panel.keypress((80,), "tab") is None
+
+
+def test_image_settings_panel_shift_tab_is_consumed():
+    from simplegals.core.config import ProjectConfig
+    from simplegals.tui.preview_panel import ImageSettingsPanel
+    from simplegals.tui.state import StagedChangesModel
+    config = ProjectConfig()
+    staged = StagedChangesModel()
+    panel = ImageSettingsPanel(
+        "a.jpg", config, staged, on_save=lambda: None, on_revert=lambda: None
+    )
+    assert panel.keypress((80,), "shift tab") is None
+
+
+def test_image_settings_panel_tab_moves_focus_forward():
+    from simplegals.core.config import ProjectConfig
+    from simplegals.tui.preview_panel import ImageSettingsPanel
+    from simplegals.tui.state import StagedChangesModel
+    config = ProjectConfig()
+    staged = StagedChangesModel()
+    panel = ImageSettingsPanel(
+        "a.jpg", config, staged, on_save=lambda: None, on_revert=lambda: None
+    )
+    initial_pos = panel._w.focus_position
+    panel.keypress((80,), "tab")
+    assert panel._w.focus_position > initial_pos
+
+
+def test_image_settings_panel_tab_wraps_to_first():
+    from simplegals.core.config import ProjectConfig
+    from simplegals.tui.preview_panel import ImageSettingsPanel
+    from simplegals.tui.state import StagedChangesModel
+    config = ProjectConfig()
+    staged = StagedChangesModel()
+    panel = ImageSettingsPanel(
+        "a.jpg", config, staged, on_save=lambda: None, on_revert=lambda: None
+    )
+    initial_pos = panel._w.focus_position
+    for _ in range(20):  # tab past all fields repeatedly
+        panel.keypress((80,), "tab")
+    assert panel._w.focus_position == initial_pos
+
+
+def test_image_settings_panel_shift_tab_moves_focus_backward():
+    from simplegals.core.config import ProjectConfig
+    from simplegals.tui.preview_panel import ImageSettingsPanel
+    from simplegals.tui.state import StagedChangesModel
+    config = ProjectConfig()
+    staged = StagedChangesModel()
+    panel = ImageSettingsPanel(
+        "a.jpg", config, staged, on_save=lambda: None, on_revert=lambda: None
+    )
+    panel.keypress((80,), "tab")  # move forward first
+    pos_after_tab = panel._w.focus_position
+    panel.keypress((80,), "shift tab")
+    assert panel._w.focus_position < pos_after_tab
+
+
+def test_gallery_settings_panel_tab_is_consumed():
+    from simplegals.core.config import ProjectConfig
+    from simplegals.tui.preview_panel import GallerySettingsPanel
+    from simplegals.tui.state import StagedChangesModel
+    config = ProjectConfig()
+    staged = StagedChangesModel()
+    panel = GallerySettingsPanel(
+        config, staged, on_save=lambda: None, on_revert=lambda: None
+    )
+    assert panel.keypress((80,), "tab") is None
+
+
+def test_gallery_settings_panel_tab_moves_focus_forward():
+    from simplegals.core.config import ProjectConfig
+    from simplegals.tui.preview_panel import GallerySettingsPanel
+    from simplegals.tui.state import StagedChangesModel
+    config = ProjectConfig()
+    staged = StagedChangesModel()
+    panel = GallerySettingsPanel(
+        config, staged, on_save=lambda: None, on_revert=lambda: None
+    )
+    initial_pos = panel._w.focus_position
+    panel.keypress((80,), "tab")
+    assert panel._w.focus_position > initial_pos
+
+
+# ── RightPanel half-width preview ─────────────────────────────────────────
+
+def test_right_panel_preview_wrapped_in_padding():
+    from simplegals.tui.preview_panel import PreviewWidget, RightPanel
+    import urwid
+    preview = PreviewWidget()
+    placeholder = urwid.Text("placeholder")
+    panel = RightPanel(preview, placeholder)
+    first_weight_widget = panel._w.contents[0][0]
+    assert isinstance(first_weight_widget, urwid.Padding)
+
+
+def test_right_panel_preview_padding_is_50_percent():
+    from simplegals.tui.preview_panel import PreviewWidget, RightPanel
+    import urwid
+    preview = PreviewWidget()
+    placeholder = urwid.Text("placeholder")
+    panel = RightPanel(preview, placeholder)
+    padding = panel._w.contents[0][0]
+    assert padding._width_type == urwid.RELATIVE
+    assert padding._width_amount == 50
+
+
+# ── app keybindings ────────────────────────────────────────────────────────
+
+def test_footer_hint_uses_ctrl_s_not_ctrl_pipe():
+    from simplegals.tui.app import FOOTER_HINT
+    assert "^S" in FOOTER_HINT
+    assert "^|" not in FOOTER_HINT
+
+
+def test_sgui_app_ctrl_s_saves_all(tmp_project):
+    from simplegals.core.config import GlobalConfig, ProjectConfig
+    from simplegals.tui.app import SGUIApp
+    config = ProjectConfig()
+    global_config = GlobalConfig()
+    config_path = tmp_project / "simpleGal.json"
+    app = SGUIApp(tmp_project, config, global_config, config_path)
+    called = []
+    app._save_all = lambda: called.append(True)
+    app._unhandled_input("ctrl s")
+    assert called, "ctrl+s should trigger save_all"
+
+
+def test_sgui_app_ctrl_backslash_not_bound(tmp_project):
+    from simplegals.core.config import GlobalConfig, ProjectConfig
+    from simplegals.tui.app import SGUIApp
+    config = ProjectConfig()
+    global_config = GlobalConfig()
+    config_path = tmp_project / "simpleGal.json"
+    app = SGUIApp(tmp_project, config, global_config, config_path)
+    called = []
+    app._save_all = lambda: called.append(True)
+    app._unhandled_input("ctrl \\")
+    assert not called, "ctrl+\\ should no longer trigger save_all"

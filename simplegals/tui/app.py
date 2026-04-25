@@ -27,13 +27,14 @@ PALETTE = [
     ("header", "white,bold", "dark blue"),
     ("footer", "white", "dark blue"),
     ("selected", "black", "light gray"),
+    ("dirty", "yellow", "default"),
     ("button", "black", "light cyan"),
     ("button_focus", "white,bold", "dark cyan"),
 ]
 
 FOOTER_HINT = (
-    "↑↓/^P^N navigate · Enter open · Tab cycle · "
-    "Esc back · ^G settings · ^| save all · ^Q quit · ^B build"
+    "↑↓/^P^N navigate · Enter open · Tab cycle fields · "
+    "Esc back · ^G settings · ^S save all · q/^Q quit · ^B build"
 )
 
 Mode = Literal["file", "image", "gallery", "build"]
@@ -94,8 +95,8 @@ class SGUIApp:
         except (ValueError, TypeError):
             file_col = (30, self._file_panel)
 
-        body = urwid.Columns([file_col, self._right_panel])
-        self._frame = urwid.Frame(body, header=header, footer=footer)
+        self._columns = urwid.Columns([file_col, self._right_panel])
+        self._frame = urwid.Frame(self._columns, header=header, footer=footer)
 
     # ── public ─────────────────────────────────────────────────────────────
 
@@ -116,10 +117,8 @@ class SGUIApp:
         elif key == "ctrl g":
             self._toggle_gallery_mode()
         elif key == "ctrl s":
-            self._save_current()
-        elif key == "ctrl \\":
             self._save_all()
-        elif key == "ctrl q":
+        elif key in ("ctrl q", "q"):
             self._quit()
         elif key == "esc" and self._mode in ("image", "gallery"):
             self._set_mode("file")
@@ -138,9 +137,12 @@ class SGUIApp:
             self._right_panel.update_settings(
                 urwid.Text("Select an image and press Enter.", align="center")
             )
+            self._columns.focus_position = 0
         elif mode == "image":
             sel = self._file_panel.selected_filename
             if sel:
+                source = self._in_dir / sel
+                thumb = self._meta_dir / f"{source.stem}_thumb{source.suffix}"
                 self._right_panel.update_settings(ImageSettingsPanel(
                     sel,
                     self._config,
@@ -148,7 +150,10 @@ class SGUIApp:
                     on_save=lambda: self._save_key(sel),
                     on_revert=lambda: self._revert_key(sel),
                     on_change=self._on_field_change,
+                    source_path=source,
+                    thumb_path=thumb,
                 ))
+            self._columns.focus_position = 1
         elif mode == "gallery":
             self._right_panel.update_settings(GallerySettingsPanel(
                 self._config,
@@ -157,8 +162,10 @@ class SGUIApp:
                 on_revert=lambda: self._revert_key("gallery"),
                 on_change=self._on_field_change,
             ))
+            self._columns.focus_position = 1
         elif mode == "build":
             self._right_panel.update_settings(self._build_progress_panel)
+            self._columns.focus_position = 0
         if self._loop:
             self._loop.draw_screen()
 

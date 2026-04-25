@@ -10,11 +10,35 @@ from ..core.config import ProjectConfig
 from .state import StagedChangesModel
 
 try:
-    from term_image.image import AutoImage
+    from term_image.image import from_file as _from_file
     from term_image.widget import UrwidImage as _UrwidImage
     _HAS_TERM_IMAGE = True
 except Exception:
     _HAS_TERM_IMAGE = False
+
+
+def _fmt_size(nbytes: int) -> str:
+    for unit in ("B", "KB", "MB", "GB"):
+        if nbytes < 1024:
+            return f"{nbytes:.0f} {unit}"
+        nbytes /= 1024
+    return f"{nbytes:.1f} GB"
+
+
+def _tab_cycle(pile: urwid.Pile, size, forward: bool) -> None:
+    """Move focus to the next/previous selectable widget in pile, wrapping around."""
+    direction = "down" if forward else "up"
+    if pile.keypress(size, direction) is not None:
+        contents = pile.contents
+        if forward:
+            pos = next((i for i, (w, _) in enumerate(contents) if w.selectable()), None)
+        else:
+            pos = next(
+                (len(contents) - 1 - i for i, (w, _) in enumerate(reversed(contents)) if w.selectable()),
+                None,
+            )
+        if pos is not None:
+            pile.focus_position = pos
 
 
 class PreviewWidget(urwid.WidgetWrap):
@@ -29,7 +53,7 @@ class PreviewWidget(urwid.WidgetWrap):
             self._w = urwid.Text(f"(Preview: {thumb_path.name})", align="center")
             return
         try:
-            img = AutoImage(str(thumb_path))
+            img = _from_file(str(thumb_path))
             self._w = _UrwidImage(img)
         except Exception as exc:
             self._w = urwid.Text(f"(Preview error: {exc})", align="center")
@@ -49,6 +73,8 @@ class ImageSettingsPanel(urwid.WidgetWrap):
         on_save: Callable,
         on_revert: Callable,
         on_change: Callable | None = None,
+        source_path: Path | None = None,
+        thumb_path: Path | None = None,
     ) -> None:
         self.filename = filename
         img = config.images.get(filename, {})
@@ -86,8 +112,13 @@ class ImageSettingsPanel(urwid.WidgetWrap):
         urwid.connect_signal(self.alt_field, "postchange", _on_alt_change)
         urwid.connect_signal(self.include_check, "postchange", _on_include_change)
 
+        orig_size = _fmt_size(source_path.stat().st_size) if source_path and source_path.exists() else "?"
+        thumb_size = _fmt_size(thumb_path.stat().st_size) if thumb_path and thumb_path.exists() else "(pending)"
+        size_line = urwid.Text(f"original: {orig_size}  thumb: {thumb_size}")
+
         pile = urwid.Pile([
             urwid.Text(f"Image: {filename}"),
+            size_line,
             urwid.Divider(),
             self.caption_field,
             self.alt_field,
@@ -96,6 +127,15 @@ class ImageSettingsPanel(urwid.WidgetWrap):
             urwid.Columns([save_btn, revert_btn]),
         ])
         super().__init__(pile)
+
+    def keypress(self, size, key: str) -> str | None:
+        if key == "tab":
+            _tab_cycle(self._w, size, forward=True)
+            return None
+        if key == "shift tab":
+            _tab_cycle(self._w, size, forward=False)
+            return None
+        return self._w.keypress(size, key)
 
 
 class GallerySettingsPanel(urwid.WidgetWrap):
@@ -195,9 +235,18 @@ class GallerySettingsPanel(urwid.WidgetWrap):
         ])
         super().__init__(pile)
 
+    def keypress(self, size, key: str) -> str | None:
+        if key == "tab":
+            _tab_cycle(self._w, size, forward=True)
+            return None
+        if key == "shift tab":
+            _tab_cycle(self._w, size, forward=False)
+            return None
+        return self._w.keypress(size, key)
+
 
 class RightPanel(urwid.WidgetWrap):
-    """Right panel: preview widget (top 55%) and settings panel (bottom 45%)."""
+    """Right panel: preview widget (top 55%, capped at half panel width) and settings panel (bottom 45%)."""
 
     def __init__(self, preview: PreviewWidget, settings: urwid.Widget) -> None:
         self.preview = preview
@@ -205,8 +254,11 @@ class RightPanel(urwid.WidgetWrap):
         super().__init__(self._build_pile())
 
     def _build_pile(self) -> urwid.Pile:
+        preview_box = urwid.Padding(
+            urwid.Filler(self.preview, "top"), "left", ("relative", 50)
+        )
         return urwid.Pile([
-            ("weight", 55, urwid.Filler(self.preview, "top")),
+            ("weight", 55, preview_box),
             ("weight", 45, urwid.Filler(self._settings, "top")),
         ])
 
