@@ -203,3 +203,123 @@ def test_sgui_help_exits_zero():
     )
     assert result.returncode == 0
     assert "sgui" in result.stdout
+
+
+def test_image_settings_panel_caption_change_stages():
+    from simplegals.core.config import ProjectConfig
+    from simplegals.tui.preview_panel import ImageSettingsPanel
+    from simplegals.tui.state import StagedChangesModel
+    config = ProjectConfig(images={"a.jpg": {"caption": "old", "alt": "", "include": True}})
+    staged = StagedChangesModel()
+    panel = ImageSettingsPanel(
+        "a.jpg", config, staged, on_save=lambda: None, on_revert=lambda: None
+    )
+    panel.caption_field.set_edit_text("new caption")
+    assert staged.get_current("a.jpg", "caption", None) == "new caption"
+    assert staged.is_dirty("a.jpg")
+
+
+def test_image_settings_panel_alt_change_stages():
+    from simplegals.core.config import ProjectConfig
+    from simplegals.tui.preview_panel import ImageSettingsPanel
+    from simplegals.tui.state import StagedChangesModel
+    config = ProjectConfig(images={"a.jpg": {"caption": "", "alt": "old alt", "include": True}})
+    staged = StagedChangesModel()
+    panel = ImageSettingsPanel(
+        "a.jpg", config, staged, on_save=lambda: None, on_revert=lambda: None
+    )
+    panel.alt_field.set_edit_text("new alt")
+    assert staged.get_current("a.jpg", "alt", None) == "new alt"
+
+
+def test_image_settings_panel_include_toggle_stages():
+    from simplegals.core.config import ProjectConfig
+    from simplegals.tui.preview_panel import ImageSettingsPanel
+    from simplegals.tui.state import StagedChangesModel
+    config = ProjectConfig(images={"a.jpg": {"caption": "", "alt": "", "include": True}})
+    staged = StagedChangesModel()
+    panel = ImageSettingsPanel(
+        "a.jpg", config, staged, on_save=lambda: None, on_revert=lambda: None
+    )
+    panel.include_check.set_state(False)
+    assert staged.get_current("a.jpg", "include", None) is False
+    assert staged.is_dirty("a.jpg")
+
+
+def test_image_settings_panel_on_change_callback_fires():
+    from simplegals.core.config import ProjectConfig
+    from simplegals.tui.preview_panel import ImageSettingsPanel
+    from simplegals.tui.state import StagedChangesModel
+    config = ProjectConfig(images={"a.jpg": {"caption": "", "alt": "", "include": True}})
+    staged = StagedChangesModel()
+    fired = []
+    panel = ImageSettingsPanel(
+        "a.jpg",
+        config,
+        staged,
+        on_save=lambda: None,
+        on_revert=lambda: None,
+        on_change=lambda: fired.append(True),
+    )
+    panel.caption_field.set_edit_text("hi")
+    assert fired, "on_change should fire when caption widget changes"
+
+
+def test_gallery_settings_panel_title_change_stages():
+    from simplegals.core.config import ProjectConfig
+    from simplegals.tui.preview_panel import GallerySettingsPanel
+    from simplegals.tui.state import StagedChangesModel
+    config = ProjectConfig(title="Old Title")
+    staged = StagedChangesModel()
+    panel = GallerySettingsPanel(
+        config, staged, on_save=lambda: None, on_revert=lambda: None
+    )
+    panel.title_field.set_edit_text("New Title")
+    assert staged.get_current("gallery", "title", None) == "New Title"
+    assert staged.is_dirty("gallery")
+
+
+def test_gallery_settings_panel_columns_change_stages_int():
+    from simplegals.core.config import Layout, ProjectConfig
+    from simplegals.tui.preview_panel import GallerySettingsPanel
+    from simplegals.tui.state import StagedChangesModel
+    config = ProjectConfig(layout=Layout(columns=3, rows=4))
+    staged = StagedChangesModel()
+    panel = GallerySettingsPanel(
+        config, staged, on_save=lambda: None, on_revert=lambda: None
+    )
+    panel.columns_field.set_edit_text("7")
+    assert staged.get_current("gallery", "layout_columns", None) == 7
+
+
+def test_gallery_settings_panel_quality_invalid_int_ignored():
+    from simplegals.core.config import ProjectConfig
+    from simplegals.tui.preview_panel import GallerySettingsPanel
+    from simplegals.tui.state import StagedChangesModel
+    config = ProjectConfig(quality=90)
+    staged = StagedChangesModel()
+    panel = GallerySettingsPanel(
+        config, staged, on_save=lambda: None, on_revert=lambda: None
+    )
+    panel.quality_field.set_edit_text("abc")
+    assert staged.get_current("gallery", "quality", None) is None
+
+
+def test_sgui_app_handles_percent_panel_width(tmp_project):
+    from simplegals.core.config import GlobalConfig, ProjectConfig
+    from simplegals.tui.app import SGUIApp
+    config = ProjectConfig()
+    global_config = GlobalConfig(file_panel_width="30%")
+    config_path = tmp_project / "simpleGal.json"
+    app = SGUIApp(tmp_project, config, global_config, config_path)
+    assert app is not None
+
+
+def test_sgui_app_handles_invalid_panel_width(tmp_project):
+    from simplegals.core.config import GlobalConfig, ProjectConfig
+    from simplegals.tui.app import SGUIApp
+    config = ProjectConfig()
+    global_config = GlobalConfig(file_panel_width="garbage")
+    config_path = tmp_project / "simpleGal.json"
+    app = SGUIApp(tmp_project, config, global_config, config_path)
+    assert app is not None

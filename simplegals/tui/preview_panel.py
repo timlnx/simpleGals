@@ -48,6 +48,7 @@ class ImageSettingsPanel(urwid.WidgetWrap):
         staged: StagedChangesModel,
         on_save: Callable,
         on_revert: Callable,
+        on_change: Callable | None = None,
     ) -> None:
         self.filename = filename
         img = config.images.get(filename, {})
@@ -61,6 +62,29 @@ class ImageSettingsPanel(urwid.WidgetWrap):
         self.include_check = urwid.CheckBox("Include in gallery", state=bool(include_val))
         save_btn = urwid.AttrMap(urwid.Button("Save", on_press=lambda _: on_save()), "button", "button_focus")
         revert_btn = urwid.AttrMap(urwid.Button("Revert", on_press=lambda _: on_revert()), "button", "button_focus")
+
+        def _notify() -> None:
+            if on_change is not None:
+                on_change()
+
+        def _on_caption_change(widget, _old):
+            orig = img.get("caption", "")
+            staged.stage(filename, "caption", orig, widget.edit_text)
+            _notify()
+
+        def _on_alt_change(widget, _old):
+            orig = img.get("alt", "")
+            staged.stage(filename, "alt", orig, widget.edit_text)
+            _notify()
+
+        def _on_include_change(widget, _old_state):
+            orig = bool(img.get("include", True))
+            staged.stage(filename, "include", orig, widget.state)
+            _notify()
+
+        urwid.connect_signal(self.caption_field, "postchange", _on_caption_change)
+        urwid.connect_signal(self.alt_field, "postchange", _on_alt_change)
+        urwid.connect_signal(self.include_check, "postchange", _on_include_change)
 
         pile = urwid.Pile([
             urwid.Text(f"Image: {filename}"),
@@ -83,6 +107,7 @@ class GallerySettingsPanel(urwid.WidgetWrap):
         staged: StagedChangesModel,
         on_save: Callable,
         on_revert: Callable,
+        on_change: Callable | None = None,
     ) -> None:
         def _v(field: str, default) -> str:
             return str(staged.get_current("gallery", field, default))
@@ -102,6 +127,58 @@ class GallerySettingsPanel(urwid.WidgetWrap):
         self.template_field = urwid.Edit("Template:    ", edit_text=_v("template", config.template or ""))
         save_btn = urwid.AttrMap(urwid.Button("Save", on_press=lambda _: on_save()), "button", "button_focus")
         revert_btn = urwid.AttrMap(urwid.Button("Revert", on_press=lambda _: on_revert()), "button", "button_focus")
+
+        def _notify() -> None:
+            if on_change is not None:
+                on_change()
+
+        def _on_title_change(widget, _old):
+            staged.stage("gallery", "title", config.title, widget.edit_text)
+            _notify()
+
+        def _on_desc_change(widget, _old):
+            staged.stage("gallery", "description", config.description, widget.edit_text)
+            _notify()
+
+        def _on_quality_change(widget, _old):
+            try:
+                val = int(widget.edit_text)
+            except ValueError:
+                return
+            staged.stage("gallery", "quality", config.quality, val)
+            _notify()
+
+        def _on_copyright_change(widget, _old):
+            staged.stage("gallery", "copyright", config.copyright, widget.edit_text)
+            _notify()
+
+        def _on_columns_change(widget, _old):
+            try:
+                val = int(widget.edit_text)
+            except ValueError:
+                return
+            staged.stage("gallery", "layout_columns", config.layout.columns, val)
+            _notify()
+
+        def _on_rows_change(widget, _old):
+            try:
+                val = int(widget.edit_text)
+            except ValueError:
+                return
+            staged.stage("gallery", "layout_rows", config.layout.rows, val)
+            _notify()
+
+        def _on_template_change(widget, _old):
+            staged.stage("gallery", "template", config.template or "", widget.edit_text)
+            _notify()
+
+        urwid.connect_signal(self.title_field, "postchange", _on_title_change)
+        urwid.connect_signal(self.desc_field, "postchange", _on_desc_change)
+        urwid.connect_signal(self.quality_field, "postchange", _on_quality_change)
+        urwid.connect_signal(self.copyright_field, "postchange", _on_copyright_change)
+        urwid.connect_signal(self.columns_field, "postchange", _on_columns_change)
+        urwid.connect_signal(self.rows_field, "postchange", _on_rows_change)
+        urwid.connect_signal(self.template_field, "postchange", _on_template_change)
 
         pile = urwid.Pile([
             urwid.Text("Gallery Settings"),

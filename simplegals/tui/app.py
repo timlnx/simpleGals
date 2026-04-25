@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import os
 import threading
+from dataclasses import replace
 from pathlib import Path
 from typing import Literal
 
@@ -84,11 +85,16 @@ class SGUIApp:
         )
         footer = urwid.AttrMap(urwid.Text(FOOTER_HINT, align="left"), "footer")
 
-        panel_width = int(global_config.file_panel_width)
-        body = urwid.Columns([
-            (panel_width, self._file_panel),
-            self._right_panel,
-        ])
+        raw = global_config.file_panel_width
+        try:
+            if isinstance(raw, str) and raw.endswith("%"):
+                file_col: tuple = ("weight", int(raw[:-1]), self._file_panel)
+            else:
+                file_col = (int(raw), self._file_panel)
+        except (ValueError, TypeError):
+            file_col = (30, self._file_panel)
+
+        body = urwid.Columns([file_col, self._right_panel])
         self._frame = urwid.Frame(body, header=header, footer=footer)
 
     # ── public ─────────────────────────────────────────────────────────────
@@ -141,6 +147,7 @@ class SGUIApp:
                     self._staged,
                     on_save=lambda: self._save_key(sel),
                     on_revert=lambda: self._revert_key(sel),
+                    on_change=self._on_field_change,
                 ))
         elif mode == "gallery":
             self._right_panel.update_settings(GallerySettingsPanel(
@@ -148,9 +155,18 @@ class SGUIApp:
                 self._staged,
                 on_save=lambda: self._save_key("gallery"),
                 on_revert=lambda: self._revert_key("gallery"),
+                on_change=self._on_field_change,
             ))
         elif mode == "build":
             self._right_panel.update_settings(self._build_progress_panel)
+        if self._loop:
+            self._loop.draw_screen()
+
+    # ── settings field callbacks ───────────────────────────────────────────
+
+    def _on_field_change(self) -> None:
+        """Called by settings panels when a widget value changes — refresh dirty marks."""
+        self._file_panel.update_dirty(set(self._staged.dirty_keys()))
         if self._loop:
             self._loop.draw_screen()
 
@@ -258,7 +274,7 @@ class SGUIApp:
 
     def _run_build(self) -> None:
         def progress_callback(state: ProgressState) -> None:
-            self._build_progress_state = state
+            self._build_progress_state = replace(state)
             if self._pipe is not None:
                 try:
                     os.write(self._pipe, b"\x00")
