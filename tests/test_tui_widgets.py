@@ -193,3 +193,13 @@ def test_sgui_app_no_dirty_on_start(tmp_project):
     config_path = tmp_project / "simpleGal.json"
     app = SGUIApp(tmp_project, config, global_config, config_path)
     assert not app._staged.has_any_dirty()
+
+
+def test_sgui_help_exits_zero():
+    import subprocess, sys
+    result = subprocess.run(
+        [sys.executable, "-m", "simplegals.tui", "--help"],
+        capture_output=True, text=True,
+    )
+    assert result.returncode == 0
+    assert "sgui" in result.stdout
