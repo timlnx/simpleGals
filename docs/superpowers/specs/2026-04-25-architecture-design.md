@@ -4,7 +4,7 @@
 
 ---
 
-There's a version of this project where `simpleGals` and `sgui` are two completely separate codebases that happen to process images in similar ways. I spent about five minutes considering that before deciding it was a bad idea — you'd be fixing the same thumbnail caching bug twice, maintaining the same Jinja2 template logic in two places, and generally manufacturing suffering out of nothing. So the architecture is: one shared core library, two thin entry points. `cli.py` parses argparse. `tui.py` stands up a urwid app. Everything that actually matters lives in `simplegals/core/`.
+The architecture is: one shared core library, two thin entry points. `cli.py` parses argparse. `tui.py` stands up a urwid app. Everything that actually matters lives in `simplegals/core/`.
 
 This document is the authoritative record of how the pieces fit together. It covers the config storage strategy, metadata/caching, the image processing pipeline, the parallel worker setup, and how `sgui` is structured internally. The keyboard reference is at the end because I will definitely forget my own keybindings.
 
@@ -31,6 +31,11 @@ simplegals/
         preview_panel.py    # right panel: term-image preview + settings
         progress_bar.py     # worker queue visualization during builds
         state.py            # staged changes model
+    template/
+        style.css           # CSS settings
+        page.html.j2        # table view template file (used for each paginated page and the 'all' page with default gallery-size preview, each item in the table links to matching generated item.html page w/ medium-size preview
+        item.html.j2        # individual gallery item page with medium-size preview, links to full-size image
+
 ```
 
 The core has no knowledge of whether a CLI or a TUI is running it. `gallery.py` doesn't import anything from `tui/`. Progress state flows out of the worker pool through a queue; whoever is listening decides what to do with it.
@@ -51,7 +56,7 @@ When either entry point kicks off a gallery build, the execution path is the sam
 8. As workers complete, `metadata.py` writes the updated sidecar for each finished image
 9. Once all processing is done, `template.py` renders the Jinja2 HTML into `out/`
 
-Step 9 is intentionally last. The template engine needs the full set of output image paths, captions, and alt text before it can render the gallery index. Don't try to stream it.
+Step 9 is intentionally last. The template engine needs the full set of output image paths, captions, and alt text before it can render. `template.py` produces N paginated `page-N.html` files (sized by `layout.rows × layout.columns` images per page) plus a single `all.html` with every included image at default gallery preview size. Each paginated page and `all.html` link through to per-image `item.html` pages. Don't try to stream the render.
 
 The `in/`, `out/`, and `.meta/` directories are created automatically on first run if they don't exist.
 
@@ -79,7 +84,10 @@ This file holds `sgui` UI preferences: `file_panel_width`, `scroll_rate`, `previ
 {
   "title": "Summer 2026",
   "description": "Some photos from the summer.",
-  "columns": 4,
+  "layout": {
+    "columns": 4,
+    "rows": 5
+  },
   "quality": 90,
   "copyright": "© 2026 timlnx",
   "template": null,
@@ -156,13 +164,17 @@ Open source image with Pillow. Apply publishing settings from `simpleGal.json`:
 
 Output full-size image → `out/<filename>.<ext>`. Output thumbnail (sized for the HTML gallery index) → `out/<filename>_thumb.<ext>`, next to it. Both PNG and JPG are supported.
 
-The EXIF copyright injection on PNG files is a bit awkward (PNG doesn't handle EXIF the same way JPEG does, ask me how I know), but Pillow manages it. Whether every image viewer reads it correctly is a question for later.
+The EXIF copyright injection on PNG files is a bit awkward (PNG doesn't handle EXIF the same way JPEG does), but Pillow manages it. Whether every image viewer reads it correctly is a question for later.
 
-Publishing settings are intentionally kept minimal for now. Chroma subsampling, additional EXIF fields, and other deep-in-the-weeds options can be added to `simpleGal.json` without touching the core architecture — `processor.py` just reads whatever is in the config.
+Publishing settings are intentionally kept minimal for now. Additional EXIF fields, and other deep-in-the-weeds options can be added to `simpleGal.json` without touching the core architecture — `processor.py` just reads whatever is in the config.
+
+Template pages will have the image centered after a simple header with the gallery game. Next and Previous buttons below the image. Original file name, date, and size (using bitmath.best_prefix with 2 digits of precision)
 
 ---
 
 ## Worker pool and progress
+
+Any processing messages including file sizes use the bitmath library with .best_prefix() applied with precision set to 2 digits. File sizes are read using bitmath.getsize(path, bestprefix=True)
 
 Image processing is CPU-bound. `concurrent.futures.ProcessPoolExecutor` is the right call here — not threads. Pillow ops are heavy enough that the GIL would eat the parallelism gains. Each worker calls `processor.py` functions with no shared state; the only communication back to the main process is through a `multiprocessing.Queue`.
 
@@ -265,3 +277,4 @@ Footer hint string: `↑↓/^P^N navigate · Enter open · Tab cycle · Esc back
 - [urwid](https://urwid.org/) — TUI framework docs, particularly the section on `pipe` and external event injection
 - [Jinja2](https://jinja.palletsprojects.com/) — template engine; the available template context variables will be documented separately once the template system is built
 - [piexif](https://piexif.readthedocs.io/) — EXIF manipulation paired with Pillow; used for copyright injection
+- [bitmath](https://github.com/timlnx/bitmath/) - File size printing and parsing library
