@@ -19,7 +19,7 @@ and in return you get some simple HTML files with thumbnails.
   - support for the [Kitty graphics protocol](https://sw.kovidgoyal.net/kitty/graphics-protocol/)
   - support for the [iTerm2 inline image protocol](https://iterm2.com/documentation-images.html)
   - Unicode and direct-color (truecolor) support
-
+- My [bitmath](git+https://github.com/timlnx/bitmath.git) library for file size printing and math
 
 (I told you, it's simple)
 
@@ -52,7 +52,8 @@ of the screen up to a max width of ~=30 characters
 * default: `30`
 
 Move the selection cursor with with the up/down arrow keys, pausing or stopping
-on a file name will marquee scroll the file name if it was truncated
+on a file name will marquee scroll the file name if it was truncated. The ctrl+n
+and ctrl+p shortcuts also work for next and previous if you are in the file panel.
 
 * setting: `scroll_rate`
 * desc: scroll rate in chars/second
