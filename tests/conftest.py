@@ -1,3 +1,4 @@
+import shutil
 import pytest
 from pathlib import Path
 
@@ -19,3 +20,16 @@ def test_png():
 @pytest.fixture
 def assets_dir():
     return ASSETS_DIR
+
+
+@pytest.fixture
+def tmp_project(tmp_path, test_jpg, test_png):
+    """Minimal project dir: in/, out/, .meta/ with both test images copied in."""
+    in_dir = tmp_path / "in"
+    out_dir = tmp_path / "out"
+    meta_dir = tmp_path / ".meta"
+    for d in (in_dir, out_dir, meta_dir):
+        d.mkdir()
+    shutil.copy(test_jpg, in_dir / test_jpg.name)
+    shutil.copy(test_png, in_dir / test_png.name)
+    return tmp_path

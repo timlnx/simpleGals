@@ -1,0 +1,113 @@
+import shutil
+from datetime import datetime, timezone
+from pathlib import Path
+import pytest
+from simplegals.core.config import ProjectConfig, settings_hash
+from simplegals.core.metadata import (
+    ImageSidecar,
+    OutputMeta,
+    ThumbMeta,
+    check_staleness,
+    file_sha256,
+    load_sidecar,
+    now_rfc3339,
+    save_sidecar,
+    sidecar_path,
+)
+
+
+def test_sidecar_path(tmp_path):
+    assert sidecar_path(tmp_path, "IMG_1234.jpg") == tmp_path / "IMG_1234.jpg.json"
+
+
+def test_now_rfc3339_is_parseable_with_tz():
+    dt = datetime.fromisoformat(now_rfc3339())
+    assert dt.tzinfo is not None
+
+
+def test_file_sha256_is_stable(test_jpg):
+    assert file_sha256(test_jpg) == file_sha256(test_jpg)
+
+
+def test_file_sha256_differs_by_content(test_jpg, test_png):
+    assert file_sha256(test_jpg) != file_sha256(test_png)
+
+
+def test_save_and_load_sidecar_roundtrip(tmp_path, test_jpg):
+    sidecar = ImageSidecar(
+        source=test_jpg.name,
+        mtime=now_rfc3339(),
+        sha256=file_sha256(test_jpg),
+        settings_hash="abc123",
+    )
+    save_sidecar(tmp_path, sidecar)
+    loaded = load_sidecar(tmp_path, test_jpg.name)
+    assert loaded is not None
+    assert loaded.source == test_jpg.name
+    assert loaded.sha256 == sidecar.sha256
+    assert loaded.settings_hash == "abc123"
+
+
+def test_load_sidecar_with_thumb_and_output(tmp_path, test_jpg):
+    sidecar = ImageSidecar(
+        source=test_jpg.name,
+        mtime=now_rfc3339(),
+        sha256=file_sha256(test_jpg),
+        settings_hash="x",
+        thumb=ThumbMeta(path=".meta/TEST_thumb.jpg", generated_at=now_rfc3339()),
+        output=OutputMeta(
+            path="out/TEST.jpg",
+            thumb_path="out/TEST_thumb.jpg",
+            generated_at=now_rfc3339(),
+        ),
+    )
+    save_sidecar(tmp_path, sidecar)
+    loaded = load_sidecar(tmp_path, test_jpg.name)
+    assert loaded.thumb is not None
+    assert loaded.output is not None
+    assert loaded.output.thumb_path == "out/TEST_thumb.jpg"
+
+
+def test_load_sidecar_returns_none_when_missing(tmp_path):
+    assert load_sidecar(tmp_path, "ghost.jpg") is None
+
+
+def test_no_sidecar_means_fully_stale(tmp_path, test_jpg):
+    meta_dir = tmp_path / ".meta"
+    meta_dir.mkdir()
+    thumb_stale, output_stale = check_staleness(test_jpg, meta_dir, ProjectConfig())
+    assert thumb_stale and output_stale
+
+
+def test_fresh_mtime_means_not_stale(tmp_path, test_jpg):
+    meta_dir = tmp_path / ".meta"
+    meta_dir.mkdir()
+    config = ProjectConfig()
+    mtime = datetime.fromtimestamp(test_jpg.stat().st_mtime, tz=timezone.utc).isoformat()
+    sidecar = ImageSidecar(
+        source=test_jpg.name,
+        mtime=mtime,
+        sha256=file_sha256(test_jpg),
+        settings_hash=settings_hash(config),
+    )
+    save_sidecar(meta_dir, sidecar)
+    thumb_stale, output_stale = check_staleness(test_jpg, meta_dir, config)
+    assert not thumb_stale and not output_stale
+
+
+def test_settings_change_makes_output_stale_not_thumb(tmp_path, test_jpg):
+    meta_dir = tmp_path / ".meta"
+    meta_dir.mkdir()
+    old_config = ProjectConfig(quality=90)
+    new_config = ProjectConfig(quality=85)
+    mtime = datetime.fromtimestamp(test_jpg.stat().st_mtime, tz=timezone.utc).isoformat()
+    sidecar = ImageSidecar(
+        source=test_jpg.name,
+        mtime=mtime,
+        sha256=file_sha256(test_jpg),
+        settings_hash=settings_hash(old_config),
+    )
+    save_sidecar(meta_dir, sidecar)
+    thumb_stale, output_stale = check_staleness(test_jpg, meta_dir, new_config)
+    assert not thumb_stale
+    assert output_stale
