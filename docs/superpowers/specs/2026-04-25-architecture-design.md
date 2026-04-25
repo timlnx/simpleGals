@@ -56,7 +56,14 @@ When either entry point kicks off a gallery build, the execution path is the sam
 8. As workers complete, `metadata.py` writes the updated sidecar for each finished image
 9. Once all processing is done, `template.py` renders the Jinja2 HTML into `out/`
 
-Step 9 is intentionally last. The template engine needs the full set of output image paths, captions, and alt text before it can render. `template.py` produces N paginated `page-N.html` files (sized by `layout.rows × layout.columns` images per page) plus a single `all.html` with every included image at default gallery preview size. Each paginated page and `all.html` link through to per-image `item.html` pages. Don't try to stream the render.
+Step 9 is intentionally last. The template engine needs the full set of output image paths, captions, and alt text before it can render. `template.py` produces:
+
+- `out/index.html` — the main entry page; first paginated view, links to `all.html`
+- `out/page-N.html` — paginated pages sized by `layout.rows × layout.columns` images per page
+- `out/all.html` — single-page view of all included images; respects `layout.columns` but ignores `layout.rows`; linked from `index.html`
+- `out/<filename>_item.html` — per-image pages (medium-size preview, filename, date, size, Next/Previous)
+
+`page.html.j2` is reused for both paginated pages and `all.html` — just different context (all images vs. one page's worth, pagination controls vs. none). Don't try to stream the render.
 
 The `in/`, `out/`, and `.meta/` directories are created automatically on first run if they don't exist.
 
