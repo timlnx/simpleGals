@@ -163,3 +163,33 @@ def test_build_progress_panel_instantiates():
     panel = BuildProgressPanel()
     state = ProgressState(thumb_total=2, thumb_done=1, output_total=2, output_done=0)
     panel.update(state)  # should not raise
+
+
+def test_sgui_app_instantiates(tmp_project):
+    from simplegals.core.config import GlobalConfig, ProjectConfig
+    from simplegals.tui.app import SGUIApp
+    config = ProjectConfig()
+    global_config = GlobalConfig()
+    config_path = tmp_project / "simpleGal.json"
+    app = SGUIApp(tmp_project, config, global_config, config_path)
+    assert app is not None
+
+
+def test_sgui_app_mode_starts_as_file(tmp_project):
+    from simplegals.core.config import GlobalConfig, ProjectConfig
+    from simplegals.tui.app import SGUIApp
+    config = ProjectConfig()
+    global_config = GlobalConfig()
+    config_path = tmp_project / "simpleGal.json"
+    app = SGUIApp(tmp_project, config, global_config, config_path)
+    assert app._mode == "file"
+
+
+def test_sgui_app_no_dirty_on_start(tmp_project):
+    from simplegals.core.config import GlobalConfig, ProjectConfig
+    from simplegals.tui.app import SGUIApp
+    config = ProjectConfig()
+    global_config = GlobalConfig()
+    config_path = tmp_project / "simpleGal.json"
+    app = SGUIApp(tmp_project, config, global_config, config_path)
+    assert not app._staged.has_any_dirty()
