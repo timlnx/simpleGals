@@ -27,6 +27,12 @@ dev = [
     "pytest",
     "pytest-cov",
 ]
+docs = [
+    "sphinx",
+    "sphinx-rtd-theme",
+    "myst-parser",
+    "sphinx-autobuild",
+]
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",
     "Environment :: Console",

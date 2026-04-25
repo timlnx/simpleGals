@@ -44,6 +44,26 @@ tests/
 
 Standard library only for test infrastructure — no third-party test helpers beyond `pytest` and `pytest-cov`. Use `pathlib.Path` throughout; no hardcoded path separators. Tests against `TEST.jpg` and `TEST.png` in `tests/assets/` cover the real Pillow operations against real image data.
 
+## Documentation
+
+Docs are built with Sphinx + MyST Parser (Markdown source) and hosted on ReadTheDocs. Configuration lives in `docs/conf.py`; the ReadTheDocs build config is `.readthedocs.yaml` at the project root. Theme is `sphinx-rtd-theme`.
+
+**Build locally:**
+
+```bash
+pip install -e ".[docs]"
+cd docs && make html
+# output at docs/_build/html/index.html
+```
+
+**Live-reload dev server** (auto-rebuilds on save, served at `http://127.0.0.1:8000`):
+
+```bash
+cd docs && make live
+```
+
+The docs build job runs on `ubuntu-latest` in CI alongside the test matrix. `docs/superpowers/` (design specs and internal planning) is excluded from the Sphinx build via `exclude_patterns` in `conf.py`.
+
 ---
 
 ## Package structure
