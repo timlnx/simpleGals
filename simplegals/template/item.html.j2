@@ -1,0 +1,42 @@
+{# simplegals/template/item.html.j2 #}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title }} — {{ image.filename }}</title>
+  <link rel="stylesheet" href="{{ css_path }}">
+</head>
+<body>
+  <div class="item-page">
+    <header>
+      <h1><a href="index.html" style="color:inherit;text-decoration:none;">{{ title }}</a></h1>
+    </header>
+
+    <img src="{{ image.output_path }}" alt="{{ image.alt or image.filename }}">
+
+    <div class="item-meta">
+      <span>{{ image.filename }}</span>
+      <span>{{ image.date }}</span>
+      <span>{{ image.size }}</span>
+    </div>
+
+    {% if image.caption %}<p style="margin-bottom:1rem;color:#ccc;">{{ image.caption }}</p>{% endif %}
+
+    <nav class="item-nav">
+      {% if prev_image %}
+        <a href="{{ prev_image.item_page }}">← {{ prev_image.filename }}</a>
+      {% else %}
+        <span></span>
+      {% endif %}
+      {% if next_image %}
+        <a href="{{ next_image.item_page }}">{{ next_image.filename }} →</a>
+      {% endif %}
+    </nav>
+
+    <footer>
+      {% if copyright %}{{ copyright }}{% endif %}
+    </footer>
+  </div>
+</body>
+</html>

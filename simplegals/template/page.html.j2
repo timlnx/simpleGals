@@ -1,0 +1,53 @@
+{# simplegals/template/page.html.j2 #}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title }}{% if not is_all_page and total_pages > 1 %} — Page {{ current_page }} of {{ total_pages }}{% endif %}</title>
+  <link rel="stylesheet" href="{{ css_path }}">
+  <style>:root { --columns: {{ columns }}; }</style>
+</head>
+<body>
+  <header>
+    <h1>{{ title }}</h1>
+    {% if description %}<p>{{ description }}</p>{% endif %}
+  </header>
+
+  {% if not is_all_page %}
+  <nav class="pagination">
+    {% if current_page > 1 %}
+      <a href="page-{{ current_page - 1 }}.html">← Prev</a>
+    {% endif %}
+    {% for n in range(1, total_pages + 1) %}
+      {% if n == current_page %}
+        <span class="current">{{ n }}</span>
+      {% else %}
+        <a href="{% if n == 1 %}index.html{% else %}page-{{ n }}.html{% endif %}">{{ n }}</a>
+      {% endif %}
+    {% endfor %}
+    {% if current_page < total_pages %}
+      <a href="page-{{ current_page + 1 }}.html">Next →</a>
+    {% endif %}
+    <a href="all.html" class="all-link">View all</a>
+  </nav>
+  {% endif %}
+
+  <div class="gallery-grid">
+    {% for image in images %}
+    <div class="gallery-item">
+      <a href="{{ image.item_page }}">
+        <img src="{{ image.thumb_path }}" alt="{{ image.alt or image.filename }}">
+      </a>
+      {% if image.caption %}
+      <div class="caption">{{ image.caption }}</div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  <footer>
+    {% if copyright %}{{ copyright }}{% endif %}
+  </footer>
+</body>
+</html>
