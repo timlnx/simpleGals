@@ -355,24 +355,6 @@ def test_selectable_image_row_update_clean_removes_attr():
     assert row._w.attr_map.get(None) is None
 
 
-# ── _fmt_size helper ───────────────────────────────────────────────────────
-
-def test_fmt_size_bytes():
-    from simplegals.tui.preview_panel import _fmt_size
-    assert _fmt_size(512) == "512 B"
-
-
-def test_fmt_size_kilobytes():
-    from simplegals.tui.preview_panel import _fmt_size
-    assert _fmt_size(2048) == "2 KB"
-
-
-def test_fmt_size_megabytes():
-    from simplegals.tui.preview_panel import _fmt_size
-    result = _fmt_size(3 * 1024 * 1024)
-    assert "MB" in result
-
-
 # ── file size display in ImageSettingsPanel ────────────────────────────────
 
 def test_image_settings_panel_shows_source_size(tmp_path):
@@ -390,7 +372,7 @@ def test_image_settings_panel_shows_source_size(tmp_path):
     )
     size_widget = panel._w.contents[1][0]
     assert "original" in size_widget.text
-    assert "2 KB" in size_widget.text
+    assert "2.00 KiB" in size_widget.text
 
 
 def test_image_settings_panel_thumb_pending_when_missing(tmp_path):

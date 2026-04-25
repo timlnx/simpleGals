@@ -4,6 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Callable
 
+import bitmath
 import urwid
 
 from ..core.config import ProjectConfig
@@ -15,14 +16,6 @@ try:
     _HAS_TERM_IMAGE = True
 except Exception:
     _HAS_TERM_IMAGE = False
-
-
-def _fmt_size(nbytes: int) -> str:
-    for unit in ("B", "KB", "MB", "GB"):
-        if nbytes < 1024:
-            return f"{nbytes:.0f} {unit}"
-        nbytes /= 1024
-    return f"{nbytes:.1f} GB"
 
 
 def _tab_cycle(pile: urwid.Pile, size, forward: bool) -> None:
@@ -112,8 +105,8 @@ class ImageSettingsPanel(urwid.WidgetWrap):
         urwid.connect_signal(self.alt_field, "postchange", _on_alt_change)
         urwid.connect_signal(self.include_check, "postchange", _on_include_change)
 
-        orig_size = _fmt_size(source_path.stat().st_size) if source_path and source_path.exists() else "?"
-        thumb_size = _fmt_size(thumb_path.stat().st_size) if thumb_path and thumb_path.exists() else "(pending)"
+        orig_size = bitmath.Byte(source_path.stat().st_size).best_prefix().format("{value:.2f} {unit}") if source_path and source_path.exists() else "?"
+        thumb_size = bitmath.Byte(thumb_path.stat().st_size).best_prefix().format("{value:.2f} {unit}") if thumb_path and thumb_path.exists() else "(pending)"
         size_line = urwid.Text(f"original: {orig_size}  thumb: {thumb_size}")
 
         pile = urwid.Pile([
