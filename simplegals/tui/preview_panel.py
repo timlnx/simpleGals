@@ -1,0 +1,138 @@
+# simplegals/tui/preview_panel.py
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Callable
+
+import urwid
+
+from ..core.config import ProjectConfig
+from .state import StagedChangesModel
+
+try:
+    from term_image.image import AutoImage
+    from term_image.widget import UrwidImage as _UrwidImage
+    _HAS_TERM_IMAGE = True
+except Exception:
+    _HAS_TERM_IMAGE = False
+
+
+class PreviewWidget(urwid.WidgetWrap):
+    """Displays a terminal image preview. Falls back gracefully when term-image is unavailable."""
+
+    def __init__(self) -> None:
+        self._placeholder = urwid.Text("(No image selected)", align="center")
+        super().__init__(self._placeholder)
+
+    def load(self, thumb_path: Path) -> None:
+        if not _HAS_TERM_IMAGE:
+            self._w = urwid.Text(f"(Preview: {thumb_path.name})", align="center")
+            return
+        try:
+            img = AutoImage(str(thumb_path))
+            self._w = _UrwidImage(img)
+        except Exception as exc:
+            self._w = urwid.Text(f"(Preview error: {exc})", align="center")
+
+    def clear(self) -> None:
+        self._w = self._placeholder
+
+
+class ImageSettingsPanel(urwid.WidgetWrap):
+    """Per-image settings: caption, alt text, include flag, Save and Revert buttons."""
+
+    def __init__(
+        self,
+        filename: str,
+        config: ProjectConfig,
+        staged: StagedChangesModel,
+        on_save: Callable,
+        on_revert: Callable,
+    ) -> None:
+        self.filename = filename
+        img = config.images.get(filename, {})
+
+        caption_val = staged.get_current(filename, "caption", img.get("caption", ""))
+        alt_val = staged.get_current(filename, "alt", img.get("alt", ""))
+        include_val = staged.get_current(filename, "include", img.get("include", True))
+
+        self.caption_field = urwid.Edit("Caption: ", edit_text=str(caption_val))
+        self.alt_field = urwid.Edit("Alt:     ", edit_text=str(alt_val))
+        self.include_check = urwid.CheckBox("Include in gallery", state=bool(include_val))
+        save_btn = urwid.AttrMap(urwid.Button("Save", on_press=lambda _: on_save()), "button", "button_focus")
+        revert_btn = urwid.AttrMap(urwid.Button("Revert", on_press=lambda _: on_revert()), "button", "button_focus")
+
+        pile = urwid.Pile([
+            urwid.Text(f"Image: {filename}"),
+            urwid.Divider(),
+            self.caption_field,
+            self.alt_field,
+            self.include_check,
+            urwid.Divider(),
+            urwid.Columns([save_btn, revert_btn]),
+        ])
+        super().__init__(pile)
+
+
+class GallerySettingsPanel(urwid.WidgetWrap):
+    """Gallery-level settings: title, description, quality, copyright, columns, rows, template."""
+
+    def __init__(
+        self,
+        config: ProjectConfig,
+        staged: StagedChangesModel,
+        on_save: Callable,
+        on_revert: Callable,
+    ) -> None:
+        def _v(field: str, default) -> str:
+            return str(staged.get_current("gallery", field, default))
+
+        self.title_field = urwid.Edit("Title:       ", edit_text=_v("title", config.title))
+        self.desc_field = urwid.Edit("Description: ", edit_text=_v("description", config.description))
+        self.quality_field = urwid.Edit("Quality:     ", edit_text=_v("quality", config.quality))
+        self.copyright_field = urwid.Edit("Copyright:   ", edit_text=_v("copyright", config.copyright))
+        self.columns_field = urwid.Edit(
+            "Columns:     ",
+            edit_text=str(staged.get_current("gallery", "layout_columns", config.layout.columns)),
+        )
+        self.rows_field = urwid.Edit(
+            "Rows:        ",
+            edit_text=str(staged.get_current("gallery", "layout_rows", config.layout.rows)),
+        )
+        self.template_field = urwid.Edit("Template:    ", edit_text=_v("template", config.template or ""))
+        save_btn = urwid.AttrMap(urwid.Button("Save", on_press=lambda _: on_save()), "button", "button_focus")
+        revert_btn = urwid.AttrMap(urwid.Button("Revert", on_press=lambda _: on_revert()), "button", "button_focus")
+
+        pile = urwid.Pile([
+            urwid.Text("Gallery Settings"),
+            urwid.Divider(),
+            self.title_field,
+            self.desc_field,
+            self.quality_field,
+            self.copyright_field,
+            self.columns_field,
+            self.rows_field,
+            self.template_field,
+            urwid.Divider(),
+            urwid.Columns([save_btn, revert_btn]),
+        ])
+        super().__init__(pile)
+
+
+class RightPanel(urwid.WidgetWrap):
+    """Right panel: preview widget (top 55%) and settings panel (bottom 45%)."""
+
+    def __init__(self, preview: PreviewWidget, settings: urwid.Widget) -> None:
+        self.preview = preview
+        self._settings = settings
+        super().__init__(self._build_pile())
+
+    def _build_pile(self) -> urwid.Pile:
+        return urwid.Pile([
+            ("weight", 55, urwid.Filler(self.preview, "top")),
+            ("weight", 45, urwid.Filler(self._settings, "top")),
+        ])
+
+    def update_settings(self, new_settings: urwid.Widget) -> None:
+        self._settings = new_settings
+        self._w = self._build_pile()
