@@ -143,3 +143,6 @@ secrets.toml
 in/
 out/
 .meta/
+
+# oh-my-claudecode internal state
+.omc/
