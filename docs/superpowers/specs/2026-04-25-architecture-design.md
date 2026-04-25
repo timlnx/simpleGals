@@ -10,6 +10,42 @@ This document is the authoritative record of how the pieces fit together. It cov
 
 ---
 
+## Proof of concept goals
+
+This initial build serves two purposes simultaneously. The first is obvious — get simpleGals working. The second is that simpleGals is the real-world integration test for the bitmath 2.0.0 pre-release refactoring. bitmath 2.0.0 does not exist on PyPI yet. We're installing it from `/Users/tbielawa/Projects/bitmath` during prototyping, and every place we print a file size or process a byte count is a live test of that release.
+
+The publish sequence is strict and non-negotiable:
+
+1. Build simpleGals prototype, validate bitmath 2.0.0 functionality
+2. Publish bitmath 2.0.0 to PyPI (separately)
+3. Update `pyproject.toml` to `bitmath>=2.0.0` from PyPI
+4. Create the initial public GitHub project for simpleGals
+
+Do NOT push simpleGals to GitHub before this sequence completes.
+
+---
+
+## Testing
+
+Tests live in `tests/` at the project root. The runner is `pytest`. Platform matrix: macOS, Linux, Windows.
+
+```
+tests/
+    conftest.py             # shared fixtures (tmp dirs, config factories, asset paths)
+    assets/
+        TEST.jpg            # full-size JPEG for resize, thumbnail, and cache tests
+        TEST.png            # full-size PNG for the same
+    test_config.py          # config load/merge/init/write
+    test_metadata.py        # sidecar r/w, staleness algorithm
+    test_processor.py       # thumbnail generation, output image, EXIF injection
+    test_gallery.py         # build orchestration, task list generation
+    test_template.py        # Jinja2 render output, pagination, all-page
+```
+
+Standard library only for test infrastructure — no third-party test helpers beyond `pytest` and `pytest-cov`. Use `pathlib.Path` throughout; no hardcoded path separators. Tests against `TEST.jpg` and `TEST.png` in `tests/assets/` cover the real Pillow operations against real image data.
+
+---
+
 ## Package structure
 
 ```

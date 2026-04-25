@@ -14,11 +14,18 @@ authors = [
 requires-python = ">=3.12"
 dependencies = [
     "term-image @ git+https://github.com/AnonymouX47/term-image.git",
-    "bitmath",
+    # bitmath 2.0.0 pre-release — switch to "bitmath>=2.0.0" after PyPI publish
+    "bitmath @ file:///Users/tbielawa/Projects/bitmath",
     "jinja2",
     "piexif",
     "pillow",
     "urwid",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
 ]
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",
