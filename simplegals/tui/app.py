@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import signal
 import threading
 from dataclasses import replace
 from pathlib import Path
@@ -34,7 +35,7 @@ PALETTE = [
 
 FOOTER_HINT = (
     "↑↓/^P^N navigate · Enter open · Tab cycle fields · "
-    "Esc back · ^G settings · ^S save all · q/^Q quit · ^B build"
+    "Esc back · ^G settings · ^W write out settings · ^C quit · ^B build"
 )
 
 Mode = Literal["file", "image", "gallery", "build"]
@@ -62,6 +63,7 @@ class SGUIApp:
         self._build_had_errors: bool = False
         self._pipe: int | None = None
         self._loop: urwid.MainLoop | None = None
+        self._quit_prompted: bool = False
 
         in_dir, _out_dir, meta_dir = ensure_project_dirs(project_dir)
         self._in_dir = in_dir
@@ -107,6 +109,15 @@ class SGUIApp:
             unhandled_input=self._unhandled_input,
         )
         self._pipe = self._loop.watch_pipe(self._on_pipe_data)
+
+        def _sigint(signum, frame):
+            if self._pipe is not None:
+                try:
+                    os.write(self._pipe, b"\x03")
+                except OSError:
+                    pass
+
+        signal.signal(signal.SIGINT, _sigint)
         self._loop.run()
 
     # ── keyboard dispatch ──────────────────────────────────────────────────
@@ -116,12 +127,15 @@ class SGUIApp:
             self._trigger_build()
         elif key == "ctrl g":
             self._toggle_gallery_mode()
-        elif key == "ctrl s":
+        elif key == "ctrl w":
             self._save_all()
-        elif key in ("ctrl q", "q"):
+        elif key == "q":
             self._quit()
-        elif key == "esc" and self._mode in ("image", "gallery"):
-            self._set_mode("file")
+        elif key == "esc":
+            if self._quit_prompted:
+                self._close_overlay()
+            elif self._mode in ("image", "gallery"):
+                self._set_mode("file")
 
     def _toggle_gallery_mode(self) -> None:
         if self._mode == "gallery":
@@ -235,21 +249,21 @@ class SGUIApp:
     # ── quit ───────────────────────────────────────────────────────────────
 
     def _quit(self) -> None:
-        if self._staged.has_any_dirty():
+        if self._staged.has_any_dirty() and not self._quit_prompted:
+            self._quit_prompted = True
             self._show_quit_prompt()
         else:
             raise urwid.ExitMainLoop()
 
     def _show_quit_prompt(self) -> None:
-        save_btn = urwid.Button("Save all & quit", on_press=self._save_all_and_quit)
-        discard_btn = urwid.Button("Discard & quit", on_press=self._discard_and_quit)
-        cancel_btn = urwid.Button("Cancel", on_press=self._close_overlay)
+        save_btn = urwid.Button("Save & quit", on_press=self._save_all_and_quit)
+        discard_btn = urwid.Button("Quit without saving", on_press=self._discard_and_quit)
         body = urwid.Pile([
-            urwid.Text("You have unsaved changes.", align="center"),
+            urwid.Text("Save before quitting?", align="center"),
             urwid.Divider(),
-            urwid.Columns([save_btn, discard_btn, cancel_btn]),
+            urwid.Columns([save_btn, discard_btn]),
         ])
-        self._push_overlay(body, width=60, height=8)
+        self._push_overlay(body, width=60, height=7)
 
     def _save_all_and_quit(self, _) -> None:
         self._save_all()
@@ -258,7 +272,8 @@ class SGUIApp:
     def _discard_and_quit(self, _) -> None:
         raise urwid.ExitMainLoop()
 
-    def _close_overlay(self, _) -> None:
+    def _close_overlay(self, _=None) -> None:
+        self._quit_prompted = False
         if self._loop:
             self._loop.widget = self._frame
 
@@ -306,6 +321,8 @@ class SGUIApp:
             self._show_build_error_modal()
         elif b"\x02" in data:
             self._set_mode("file")
+        if b"\x03" in data:
+            self._quit()
         if self._loop:
             self._loop.draw_screen()
 

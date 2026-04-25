@@ -534,7 +534,7 @@ def test_right_panel_preview_wrapped_in_padding():
     assert isinstance(first_weight_widget, urwid.Padding)
 
 
-def test_right_panel_preview_padding_is_50_percent():
+def test_right_panel_preview_padding_is_50_percent_centered():
     from simplegals.tui.preview_panel import PreviewWidget, RightPanel
     import urwid
     preview = PreviewWidget()
@@ -543,17 +543,38 @@ def test_right_panel_preview_padding_is_50_percent():
     padding = panel._w.contents[0][0]
     assert padding._width_type == urwid.RELATIVE
     assert padding._width_amount == 50
+    assert padding._align_type == urwid.CENTER
 
 
 # ── app keybindings ────────────────────────────────────────────────────────
 
-def test_footer_hint_uses_ctrl_s_not_ctrl_pipe():
+def test_footer_hint_uses_ctrl_w_write_out():
     from simplegals.tui.app import FOOTER_HINT
-    assert "^S" in FOOTER_HINT
+    assert "^W" in FOOTER_HINT
+    assert "write out" in FOOTER_HINT
+
+
+def test_footer_hint_uses_ctrl_c_quit():
+    from simplegals.tui.app import FOOTER_HINT
+    assert "^C" in FOOTER_HINT
     assert "^|" not in FOOTER_HINT
+    assert "^S" not in FOOTER_HINT
 
 
-def test_sgui_app_ctrl_s_saves_all(tmp_project):
+def test_sgui_app_ctrl_w_saves_all(tmp_project):
+    from simplegals.core.config import GlobalConfig, ProjectConfig
+    from simplegals.tui.app import SGUIApp
+    config = ProjectConfig()
+    global_config = GlobalConfig()
+    config_path = tmp_project / "simpleGal.json"
+    app = SGUIApp(tmp_project, config, global_config, config_path)
+    called = []
+    app._save_all = lambda: called.append(True)
+    app._unhandled_input("ctrl w")
+    assert called, "ctrl+w should trigger save_all"
+
+
+def test_sgui_app_ctrl_s_not_bound(tmp_project):
     from simplegals.core.config import GlobalConfig, ProjectConfig
     from simplegals.tui.app import SGUIApp
     config = ProjectConfig()
@@ -563,17 +584,58 @@ def test_sgui_app_ctrl_s_saves_all(tmp_project):
     called = []
     app._save_all = lambda: called.append(True)
     app._unhandled_input("ctrl s")
-    assert called, "ctrl+s should trigger save_all"
+    assert not called, "ctrl+s should no longer be bound"
 
 
-def test_sgui_app_ctrl_backslash_not_bound(tmp_project):
+def test_sgui_app_q_triggers_quit_when_clean(tmp_project):
+    import urwid
     from simplegals.core.config import GlobalConfig, ProjectConfig
     from simplegals.tui.app import SGUIApp
     config = ProjectConfig()
     global_config = GlobalConfig()
     config_path = tmp_project / "simpleGal.json"
     app = SGUIApp(tmp_project, config, global_config, config_path)
-    called = []
-    app._save_all = lambda: called.append(True)
-    app._unhandled_input("ctrl \\")
-    assert not called, "ctrl+\\ should no longer trigger save_all"
+    with pytest.raises(urwid.ExitMainLoop):
+        app._unhandled_input("q")
+
+
+def test_sgui_app_quit_shows_prompt_when_dirty(tmp_project):
+    from simplegals.core.config import GlobalConfig, ProjectConfig
+    from simplegals.tui.app import SGUIApp
+    config = ProjectConfig()
+    global_config = GlobalConfig()
+    config_path = tmp_project / "simpleGal.json"
+    app = SGUIApp(tmp_project, config, global_config, config_path)
+    app._staged.stage("a.jpg", "caption", "old", "new")
+    prompts = []
+    app._show_quit_prompt = lambda: prompts.append(True)
+    app._quit()
+    assert prompts, "dirty state should show quit prompt"
+    assert app._quit_prompted
+
+
+def test_sgui_app_second_quit_exits_immediately(tmp_project):
+    import urwid
+    from simplegals.core.config import GlobalConfig, ProjectConfig
+    from simplegals.tui.app import SGUIApp
+    config = ProjectConfig()
+    global_config = GlobalConfig()
+    config_path = tmp_project / "simpleGal.json"
+    app = SGUIApp(tmp_project, config, global_config, config_path)
+    app._staged.stage("a.jpg", "caption", "old", "new")
+    app._quit_prompted = True  # simulate dialog already shown
+    with pytest.raises(urwid.ExitMainLoop):
+        app._quit()
+
+
+def test_sgui_app_esc_dismisses_quit_dialog(tmp_project):
+    from simplegals.core.config import GlobalConfig, ProjectConfig
+    from simplegals.tui.app import SGUIApp
+    config = ProjectConfig()
+    global_config = GlobalConfig()
+    config_path = tmp_project / "simpleGal.json"
+    app = SGUIApp(tmp_project, config, global_config, config_path)
+    app._quit_prompted = True
+    app._close_overlay = lambda _=None: setattr(app, "_quit_prompted", False)
+    app._unhandled_input("esc")
+    assert not app._quit_prompted

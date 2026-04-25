@@ -248,7 +248,7 @@ class RightPanel(urwid.WidgetWrap):
 
     def _build_pile(self) -> urwid.Pile:
         preview_box = urwid.Padding(
-            urwid.Filler(self.preview, "top"), "left", ("relative", 50)
+            urwid.Filler(self.preview, "top"), "center", ("relative", 50)
         )
         return urwid.Pile([
             ("weight", 55, preview_box),
