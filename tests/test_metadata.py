@@ -79,7 +79,43 @@ def test_no_sidecar_means_fully_stale(tmp_path, test_jpg):
     assert thumb_stale and output_stale
 
 
+def _make_artifacts(tmp_path, meta_dir, test_jpg):
+    """Create thumb and output files on disk and return (ThumbMeta, OutputMeta)."""
+    thumb_path = meta_dir / f"{test_jpg.stem}_thumb{test_jpg.suffix}"
+    out_dir = tmp_path / "out"
+    out_dir.mkdir(exist_ok=True)
+    output_path = out_dir / test_jpg.name
+    output_thumb_path = out_dir / f"{test_jpg.stem}_thumb{test_jpg.suffix}"
+    shutil.copy(test_jpg, thumb_path)
+    shutil.copy(test_jpg, output_path)
+    shutil.copy(test_jpg, output_thumb_path)
+    return (
+        ThumbMeta(path=str(thumb_path), generated_at=now_rfc3339()),
+        OutputMeta(path=str(output_path), thumb_path=str(output_thumb_path), generated_at=now_rfc3339()),
+    )
+
+
 def test_fresh_mtime_means_not_stale(tmp_path, test_jpg):
+    meta_dir = tmp_path / ".meta"
+    meta_dir.mkdir()
+    config = ProjectConfig()
+    mtime = datetime.fromtimestamp(test_jpg.stat().st_mtime, tz=timezone.utc).isoformat()
+    thumb_meta, output_meta = _make_artifacts(tmp_path, meta_dir, test_jpg)
+    sidecar = ImageSidecar(
+        source=test_jpg.name,
+        mtime=mtime,
+        sha256=file_sha256(test_jpg),
+        settings_hash=settings_hash(config),
+        thumb=thumb_meta,
+        output=output_meta,
+    )
+    save_sidecar(meta_dir, sidecar)
+    thumb_stale, output_stale = check_staleness(test_jpg, meta_dir, config)
+    assert not thumb_stale and not output_stale
+
+
+def test_missing_artifacts_means_stale(tmp_path, test_jpg):
+    """Sidecar with current mtime/hash but no artifacts on disk → both stale."""
     meta_dir = tmp_path / ".meta"
     meta_dir.mkdir()
     config = ProjectConfig()
@@ -92,7 +128,7 @@ def test_fresh_mtime_means_not_stale(tmp_path, test_jpg):
     )
     save_sidecar(meta_dir, sidecar)
     thumb_stale, output_stale = check_staleness(test_jpg, meta_dir, config)
-    assert not thumb_stale and not output_stale
+    assert thumb_stale and output_stale
 
 
 def test_settings_change_makes_output_stale_not_thumb(tmp_path, test_jpg):
@@ -101,11 +137,14 @@ def test_settings_change_makes_output_stale_not_thumb(tmp_path, test_jpg):
     old_config = ProjectConfig(quality=90)
     new_config = ProjectConfig(quality=85)
     mtime = datetime.fromtimestamp(test_jpg.stat().st_mtime, tz=timezone.utc).isoformat()
+    thumb_meta, output_meta = _make_artifacts(tmp_path, meta_dir, test_jpg)
     sidecar = ImageSidecar(
         source=test_jpg.name,
         mtime=mtime,
         sha256=file_sha256(test_jpg),
         settings_hash=settings_hash(old_config),
+        thumb=thumb_meta,
+        output=output_meta,
     )
     save_sidecar(meta_dir, sidecar)
     thumb_stale, output_stale = check_staleness(test_jpg, meta_dir, new_config)

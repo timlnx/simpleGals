@@ -78,6 +78,7 @@ class SGUIApp:
             dirty_filenames=set(),
             on_selection_change=self._on_selection_change,
             on_enter=self._on_file_enter,
+            scroll_rate=global_config.scroll_rate,
         )
 
         placeholder = urwid.Text("Select an image and press Enter.", align="center")
@@ -109,6 +110,7 @@ class SGUIApp:
             unhandled_input=self._unhandled_input,
         )
         self._pipe = self._loop.watch_pipe(self._on_pipe_data)
+        self._file_panel._loop = self._loop
 
         def _sigint(signum, frame):
             if self._pipe is not None:

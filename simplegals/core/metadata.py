@@ -88,14 +88,21 @@ def check_staleness(
     current_s_hash = compute_settings_hash(config)
     current_mtime = _mtime_str(source)
 
+    def _artifacts_exist() -> tuple[bool, bool]:
+        thumb_missing = sidecar.thumb is None or not Path(sidecar.thumb.path).exists()
+        output_missing = sidecar.output is None or not Path(sidecar.output.path).exists()
+        return thumb_missing, output_missing
+
     if current_mtime == sidecar.mtime:
-        return False, current_s_hash != sidecar.settings_hash
+        thumb_missing, output_missing = _artifacts_exist()
+        return thumb_missing, output_missing or current_s_hash != sidecar.settings_hash
 
     current_sha = file_sha256(source)
     if current_sha == sidecar.sha256:
         # touched but unchanged — refresh stored mtime
         sidecar.mtime = current_mtime
         save_sidecar(meta_dir, sidecar)
-        return False, current_s_hash != sidecar.settings_hash
+        thumb_missing, output_missing = _artifacts_exist()
+        return thumb_missing, output_missing or current_s_hash != sidecar.settings_hash
 
     return True, True

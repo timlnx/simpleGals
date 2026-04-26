@@ -11,7 +11,7 @@ from pathlib import Path
 class GlobalConfig:
     file_panel_width: int | str = 30
     scroll_rate: float = 2.0
-    preview_delay: int = 75
+    preview_delay: int = 125
 
 
 @dataclass

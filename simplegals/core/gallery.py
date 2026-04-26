@@ -68,6 +68,7 @@ def build(
     project_dir: Path,
     config: ProjectConfig,
     progress_callback=None,
+    force: bool = False,
 ) -> tuple[Path, bool]:
     """Run a full gallery build. Returns (log_path, had_errors)."""
     in_dir, out_dir, meta_dir = ensure_project_dirs(project_dir)
@@ -81,12 +82,17 @@ def build(
 
     sources = scan_sources(in_dir)
     log(f"Found {len(sources)} source image(s) in {in_dir}")
+    if force:
+        log("Force rebuild requested — skipping cache.")
 
     thumb_tasks: list[tuple] = []
     output_tasks: list[tuple] = []
 
     for source in sources:
-        thumb_stale, output_stale = check_staleness(source, meta_dir, config)
+        if force:
+            thumb_stale, output_stale = True, True
+        else:
+            thumb_stale, output_stale = check_staleness(source, meta_dir, config)
         if thumb_stale:
             thumb_tasks.append((str(source), str(meta_dir), None))
         if output_stale:

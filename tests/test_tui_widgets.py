@@ -639,3 +639,134 @@ def test_sgui_app_esc_dismisses_quit_dialog(tmp_project):
     app._close_overlay = lambda _=None: setattr(app, "_quit_prompted", False)
     app._unhandled_input("esc")
     assert not app._quit_prompted
+
+
+# ── clip wrap + marquee scroll ─────────────────────────────────────────────
+
+def test_selectable_image_row_uses_clip_wrap():
+    from simplegals.tui.file_panel import SelectableImageRow
+    import urwid
+    row = SelectableImageRow("IMG_very_long_filename.jpg", dirty=False)
+    assert row._icon.wrap == urwid.WrapMode.CLIP
+
+
+class MockLoop:
+    def __init__(self):
+        self.scheduled = []
+        self.removed = []
+        self.draw_count = 0
+        self._counter = 0
+
+    def set_alarm_in(self, delay, cb, *args):
+        handle = self._counter
+        self._counter += 1
+        self.scheduled.append((handle, delay, cb, args))
+        return handle
+
+    def remove_alarm(self, handle):
+        self.removed.append(handle)
+        self.scheduled = [(h, d, c, a) for h, d, c, a in self.scheduled if h != handle]
+
+    def draw_screen(self):
+        self.draw_count += 1
+
+
+def test_file_panel_accepts_loop_and_scroll_rate():
+    from simplegals.tui.file_panel import FilePanel
+    loop = MockLoop()
+    sources = [Path("a.jpg")]
+    panel = FilePanel(sources, dirty_filenames=set(), loop=loop, scroll_rate=4.0)
+    assert panel._loop is loop
+    assert panel._scroll_rate == 4.0
+
+
+def test_file_panel_starts_scroll_alarm_for_long_name():
+    from simplegals.tui.file_panel import FilePanel
+    loop = MockLoop()
+    sources = [Path("a_very_long_filename_that_exceeds_panel_width.jpg")]
+    panel = FilePanel(sources, dirty_filenames=set(), loop=loop, scroll_rate=4.0)
+    panel._last_col = 10
+    panel._start_scroll()
+    assert len(loop.scheduled) == 1
+
+
+def test_file_panel_no_scroll_alarm_for_short_name():
+    from simplegals.tui.file_panel import FilePanel
+    loop = MockLoop()
+    sources = [Path("a.jpg")]
+    panel = FilePanel(sources, dirty_filenames=set(), loop=loop, scroll_rate=4.0)
+    panel._last_col = 40
+    panel._start_scroll()
+    assert len(loop.scheduled) == 0
+
+
+def test_file_panel_no_scroll_without_loop():
+    from simplegals.tui.file_panel import FilePanel
+    sources = [Path("a_very_long_filename_that_exceeds_panel_width.jpg")]
+    panel = FilePanel(sources, dirty_filenames=set())
+    panel._last_col = 10
+    panel._start_scroll()
+    assert panel._scroll_alarm is None
+
+
+def test_file_panel_tick_scroll_advances_text():
+    from simplegals.tui.file_panel import FilePanel
+    loop = MockLoop()
+    long_name = "very_long_image_filename.jpg"
+    sources = [Path(long_name)]
+    panel = FilePanel(sources, dirty_filenames=set(), loop=loop, scroll_rate=4.0)
+    panel._last_col = 10
+    original_label = panel._rows[0].label
+    panel._tick_scroll(loop, None)
+    assert panel._rows[0].label != original_label
+    assert panel._scroll_offset == 1
+
+
+def test_file_panel_tick_scroll_wraps_offset():
+    from simplegals.tui.file_panel import FilePanel
+    loop = MockLoop()
+    sources = [Path("ab.jpg")]
+    panel = FilePanel(sources, dirty_filenames=set(), loop=loop, scroll_rate=4.0)
+    panel._last_col = 5
+    full_label = panel._rows[0]._make_label()
+    panel._scroll_offset = len(full_label) - 1
+    panel._tick_scroll(loop, None)
+    assert panel._scroll_offset == 0
+
+
+def test_file_panel_tick_scroll_reschedules_alarm():
+    from simplegals.tui.file_panel import FilePanel
+    loop = MockLoop()
+    sources = [Path("long_name_file.jpg")]
+    panel = FilePanel(sources, dirty_filenames=set(), loop=loop, scroll_rate=4.0)
+    panel._last_col = 5
+    panel._tick_scroll(loop, None)
+    assert len(loop.scheduled) == 1
+
+
+def test_file_panel_focus_change_cancels_previous_alarm():
+    from simplegals.tui.file_panel import FilePanel
+    loop = MockLoop()
+    sources = [Path("long_name_a.jpg"), Path("long_name_b.jpg")]
+    panel = FilePanel(sources, dirty_filenames=set(), loop=loop, scroll_rate=4.0)
+    panel._last_col = 5
+    panel._start_scroll()
+    first_handle = loop.scheduled[0][0]
+    panel._cancel_scroll()
+    assert first_handle in loop.removed
+
+
+def test_file_panel_focus_change_resets_scroll_offset():
+    from simplegals.tui.file_panel import FilePanel
+    loop = MockLoop()
+    sources = [Path("long_name.jpg")]
+    panel = FilePanel(sources, dirty_filenames=set(), loop=loop, scroll_rate=4.0)
+    panel._last_col = 5
+    panel._scroll_offset = 5
+    panel._cancel_scroll()
+    assert panel._scroll_offset == 0
+
+
+def test_global_config_default_preview_delay_is_125ms():
+    from simplegals.core.config import GlobalConfig
+    assert GlobalConfig().preview_delay == 125
