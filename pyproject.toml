@@ -13,9 +13,8 @@ authors = [
 ]
 requires-python = ">=3.12"
 dependencies = [
-    "term-image @ git+https://github.com/AnonymouX47/term-image.git",
-    # bitmath 2.0.0 pre-release — switch to "bitmath>=2.0.0" after PyPI publish
-    "bitmath @ file:///Users/tbielawa/Projects/bitmath",
+    "term-image",
+    "bitmath>=2.0.0",
     "jinja2",
     "piexif",
     "pillow",
@@ -54,9 +53,6 @@ sgui = "simplegals.tui:main"
 
 [project.urls]
 Repository = "https://github.com/timlnx/simpleGals"
-
-[tool.hatch.metadata]
-allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["simplegals"]
