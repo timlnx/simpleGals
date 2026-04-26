@@ -39,6 +39,8 @@ classifiers = [
 dev = [
     "pytest",
     "pytest-cov",
+    "build",
+    "twine",
 ]
 docs = [
     "sphinx",
