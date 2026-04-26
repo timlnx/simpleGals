@@ -13,12 +13,15 @@
       <h1><a href="index.html" style="color:inherit;text-decoration:none;">{{ title }}</a></h1>
     </header>
 
-    <img src="{{ image.output_path }}" alt="{{ image.alt or image.filename }}">
+    <a href="{{ image.output_path }}">
+      <img src="{{ image.output_path }}" alt="{{ image.alt or image.filename }}">
+    </a>
 
     <div class="item-meta">
       <span>{{ image.filename }}</span>
       <span>{{ image.date }}</span>
       <span>{{ image.size }}</span>
+      <span><a href="{{ image.output_path }}" download>💾</a></span>
     </div>
 
     {% if image.caption %}<p style="margin-bottom:1rem;color:#ccc;">{{ image.caption }}</p>{% endif %}

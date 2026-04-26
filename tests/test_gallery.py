@@ -90,3 +90,44 @@ def test_build_calls_progress_callback(tmp_project):
     build(tmp_project, config, progress_callback=callback)
     assert len(states) > 0
     assert all(isinstance(s, ProgressState) for s in states)
+
+
+def test_build_prunes_removed_sources(tmp_project, test_jpg):
+    config = ProjectConfig()
+    in_dir = tmp_project / "in"
+    out_dir = tmp_project / "out"
+    meta_dir = tmp_project / ".meta"
+
+    # Add a third image with a unique stem so its _item.html won't collide with fixtures
+    extra = in_dir / "REMOVE_ME.jpg"
+    shutil.copy(test_jpg, extra)
+    build(tmp_project, config)
+
+    item_html = out_dir / "REMOVE_ME_item.html"
+    sidecar = meta_dir / "REMOVE_ME.jpg.json"
+    assert item_html.exists()
+    assert sidecar.exists()
+
+    # Remove the extra source and rebuild
+    extra.unlink()
+    build(tmp_project, config)
+
+    assert not item_html.exists(), "_item.html must be pruned"
+    assert not sidecar.exists(), "sidecar must be pruned"
+    assert not (out_dir / "REMOVE_ME.jpg").exists(), "output image must be pruned"
+    assert not (meta_dir / "REMOVE_ME_thumb.jpg").exists(), "meta thumb must be pruned"
+
+
+def test_build_force_rebuilds_all(tmp_project):
+    config = ProjectConfig()
+    # First build populates the cache
+    build(tmp_project, config)
+    # Second build with fresh cache — nothing to do
+    log_path, _ = build(tmp_project, config)
+    log = log_path.read_text()
+    assert "Tasks: 0 thumb, 0 output" in log
+    # Force build must queue all tasks despite fresh cache
+    log_path2, _ = build(tmp_project, config, force=True)
+    log2 = log_path2.read_text()
+    assert "Force rebuild" in log2
+    assert "Tasks: 0 thumb, 0 output" not in log2

@@ -10,18 +10,18 @@ This document is the authoritative record of how the pieces fit together. It cov
 
 ---
 
-## Proof of concept goals
+## Proof of concept goals — COMPLETE
 
-This initial build serves two purposes simultaneously. The first is obvious — get simpleGals working. The second is that simpleGals is the real-world integration test for the bitmath 2.0.0 pre-release refactoring. bitmath 2.0.0 does not exist on PyPI yet. We're installing it from `/Users/tbielawa/Projects/bitmath` during prototyping, and every place we print a file size or process a byte count is a live test of that release.
+This initial build served two purposes simultaneously. The first was obvious — get simpleGals working. The second was that simpleGals was the real-world integration test for the bitmath 2.0.0 pre-release refactoring.
 
-The publish sequence is strict and non-negotiable:
+The publish sequence completed in order:
 
-1. Build simpleGals prototype, validate bitmath 2.0.0 functionality
-2. Publish bitmath 2.0.0 to PyPI (separately)
-3. Update `pyproject.toml` to `bitmath>=2.0.0` from PyPI
-4. Create the initial public GitHub project for simpleGals
+1. ✅ Build simpleGals prototype, validate bitmath 2.0.0 functionality
+2. ✅ Publish bitmath 2.0.0 to PyPI
+3. ✅ Update `pyproject.toml` to `bitmath>=2.0.0` from PyPI; `term-image` also moved to standard PyPI release
+4. ✅ Create the initial public GitHub project for simpleGals
 
-Do NOT push simpleGals to GitHub before this sequence completes.
+Both `bitmath` and `term-image` are now standard PyPI dependencies — no local installs or git URLs required.
 
 ---
 
@@ -218,12 +218,18 @@ All timestamps are RFC 3339 — ISO 8601 format with UTC offset (e.g., `2026-04-
 **Staleness check order** (short-circuits on first hit):
 
 1. No sidecar → stale; generate everything
-2. `mtime` unchanged → fresh; skip
-3. `mtime` changed but `sha256` matches → still fresh (file was touched but content is identical); update the stored mtime and move on
-4. `sha256` changed → stale; regenerate
+2. `mtime` unchanged → check artifact existence (see below)
+3. `mtime` changed but `sha256` matches → still fresh content; update stored mtime, check artifact existence
+4. `sha256` changed → stale; regenerate everything
 5. `settings_hash` differs from current config hash → output is stale; thumb may still be fresh
 
+**Artifact existence check** (step 2 and 3): even if the sidecar says everything is current, if the actual output files (`.meta/<stem>_thumb.<ext>`, `out/<name>`, `out/<stem>_thumb.<ext>`) don't exist on disk, they are regenerated. This handles the case where `out/` was wiped without clearing the metadata cache.
+
 Thumb staleness and output staleness are tracked independently. Changing a publishing setting only invalidates output images, not the `.meta/` previews `sgui` uses for display. That distinction saves a lot of time on repeat builds.
+
+**Force rebuild**: `simpleGals build --force` (or `-f`) skips all staleness checks and queues every image for full regeneration.
+
+**Pruning removed sources**: on every build, any `.meta/<name>.json` sidecar whose source file is no longer present in `in/` triggers cleanup of the sidecar, `.meta/<stem>_thumb<ext>`, `out/<name>`, `out/<stem>_thumb<ext>`, and `out/<stem>_item.html`. The gallery always reflects exactly what is in `in/`.
 
 There is also a `.meta/build.jsonl` build log — one JSON object appended per completed build run (timestamp, images processed, errors, duration). Grep-friendly, appendable, easy to tail. Useful for debugging "why did that take so long."
 
@@ -257,7 +263,7 @@ The EXIF copyright injection on PNG files is a bit awkward (PNG doesn't handle E
 
 Publishing settings are intentionally kept minimal for now. Additional EXIF fields, and other deep-in-the-weeds options can be added to `simpleGal.json` without touching the core architecture — `processor.py` just reads whatever is in the config.
 
-Template pages will have the image centered after a simple header with the gallery game. Next and Previous buttons below the image. Original file name, date, and size (using bitmath.best_prefix with 2 digits of precision)
+Item pages (`<stem>_item.html`) contain: the image wrapped in an `<a>` link to the full-size file; a meta row with filename, date, size (bitmath.best_prefix, 2 decimal places), and a 💾 download link (`<a download>`) to the full-size file; Prev/Next navigation; a footer with copyright if set. Pagination on gallery index pages correctly resolves page 2's ← Prev link to `index.html` rather than the non-existent `page-1.html`.
 
 ---
 
@@ -307,7 +313,7 @@ Frame
 
 ### Preview delay
 
-On selection change, cancel any pending preview timer and start a new one (`preview_delay` ms, default 75ms). When the timer fires: if `.meta/<filename>_thumb.<ext>` is fresh, display immediately. If it doesn't exist or is stale, run a single-threaded Pillow thumbnail generation inline (it's fast), write the sidecar, display. On-demand previews in `sgui` do NOT go through the worker pool — that's for batch builds only.
+On selection change, cancel any pending preview timer and start a new one (`preview_delay` ms, default 125ms). When the timer fires: if `.meta/<filename>_thumb.<ext>` is fresh, display immediately. If it doesn't exist or is stale, run a single-threaded Pillow thumbnail generation inline (it's fast), write the sidecar, display. On-demand previews in `sgui` do NOT go through the worker pool — that's for batch builds only.
 
 ### Focus and mode model
 

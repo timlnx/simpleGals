@@ -11,7 +11,7 @@ license = { text = "MIT" }
 authors = [
     { name = "Tim Case", email = "tim@lnx.cx" }
 ]
-requires-python = ">=3.12"
+requires-python = ">=3.10"
 dependencies = [
     "term-image",
     "bitmath>=2.0.0",
@@ -27,6 +27,8 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: POSIX",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Topic :: Internet :: WWW/HTTP",
@@ -39,6 +41,8 @@ classifiers = [
 dev = [
     "pytest",
     "pytest-cov",
+    "build",
+    "twine",
 ]
 docs = [
     "sphinx",

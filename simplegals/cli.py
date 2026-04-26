@@ -6,6 +6,7 @@ from pathlib import Path
 
 from .core.config import init_project, load_project_config
 from .core.gallery import build, clean, validate
+from .workers.progress import ProgressState, format_cli_progress
 
 
 def _resolve_config(args: argparse.Namespace) -> Path:
@@ -43,7 +44,18 @@ def cmd_build(args: argparse.Namespace) -> int:
         print(f"Config not found: {config_path}. Run 'simpleGals init' first.", file=sys.stderr)
         return 1
 
-    log_path, had_errors = build(Path.cwd(), config)
+    _first = [True]
+
+    def _on_progress(state: ProgressState) -> None:
+        text = format_cli_progress(state)
+        if _first[0]:
+            sys.stderr.write(text + "\n")
+            _first[0] = False
+        else:
+            sys.stderr.write(f"\x1b[2A\r{text}\n")
+        sys.stderr.flush()
+
+    log_path, had_errors = build(Path.cwd(), config, progress_callback=_on_progress, force=args.force)
 
     if had_errors:
         print(f"\nBuild completed with errors. Log: {log_path}", file=sys.stderr)
@@ -77,7 +89,12 @@ def main() -> None:
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("init", help="Create a stub simpleGal.json in the current directory")
     sub.add_parser("validate", help="Validate config and input images")
-    sub.add_parser("build", help="Build the gallery")
+    build_parser = sub.add_parser("build", help="Build the gallery")
+    build_parser.add_argument(
+        "--force", "-f",
+        action="store_true",
+        help="Rebuild all output files, ignoring the cache",
+    )
     sub.add_parser("clean", help="Remove all cached metadata from .meta/")
 
     args = parser.parse_args()
