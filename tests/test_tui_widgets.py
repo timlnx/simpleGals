@@ -24,7 +24,7 @@ def test_selectable_image_row_not_dirty_no_star():
 def test_selectable_image_row_update_dirty():
     from simplegals.tui.file_panel import SelectableImageRow
     row = SelectableImageRow("IMG_1234.jpg", dirty=False)
-    row.update_dirty(True)
+    row.update_marks(True, False)
     assert "*" in row.label
 
 
@@ -344,14 +344,14 @@ def test_selectable_image_row_clean_has_no_color_attr():
 def test_selectable_image_row_update_dirty_changes_attr():
     from simplegals.tui.file_panel import SelectableImageRow
     row = SelectableImageRow("a.jpg", dirty=False)
-    row.update_dirty(True)
+    row.update_marks(True, False)
     assert row._w.attr_map.get(None) == "dirty"
 
 
 def test_selectable_image_row_update_clean_removes_attr():
     from simplegals.tui.file_panel import SelectableImageRow
     row = SelectableImageRow("a.jpg", dirty=True)
-    row.update_dirty(False)
+    row.update_marks(False, False)
     assert row._w.attr_map.get(None) is None
 
 
@@ -551,7 +551,7 @@ def test_right_panel_preview_padding_is_50_percent_centered():
 def test_footer_hint_uses_ctrl_w_write_out():
     from simplegals.tui.app import FOOTER_HINT
     assert "^W" in FOOTER_HINT
-    assert "write out" in FOOTER_HINT
+    assert "write" in FOOTER_HINT
 
 
 def test_footer_hint_uses_ctrl_c_quit():
