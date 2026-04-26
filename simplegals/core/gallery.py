@@ -64,6 +64,31 @@ def clean(project_dir: Path) -> None:
                 p.unlink()
 
 
+def prune_removed_sources(
+    out_dir: Path,
+    meta_dir: Path,
+    source_names: set[str],
+) -> int:
+    """Delete out/ and .meta/ artifacts for sources no longer present in in/.
+
+    Returns the number of source entries pruned.
+    """
+    removed = 0
+    for sidecar in meta_dir.glob("*.json"):
+        name = sidecar.stem  # e.g. "DSC_8297.jpg" (strip trailing .json)
+        if name in source_names:
+            continue
+        stem = Path(name).stem
+        ext = Path(name).suffix
+        sidecar.unlink(missing_ok=True)
+        (meta_dir / f"{stem}_thumb{ext}").unlink(missing_ok=True)
+        (out_dir / name).unlink(missing_ok=True)
+        (out_dir / f"{stem}_thumb{ext}").unlink(missing_ok=True)
+        (out_dir / f"{stem}_item.html").unlink(missing_ok=True)
+        removed += 1
+    return removed
+
+
 def build(
     project_dir: Path,
     config: ProjectConfig,
@@ -82,6 +107,12 @@ def build(
 
     sources = scan_sources(in_dir)
     log(f"Found {len(sources)} source image(s) in {in_dir}")
+
+    source_names = {s.name for s in sources}
+    pruned = prune_removed_sources(out_dir, meta_dir, source_names)
+    if pruned:
+        log(f"Pruned {pruned} removed source(s) from out/ and .meta/")
+
     if force:
         log("Force rebuild requested — skipping cache.")
 
