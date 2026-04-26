@@ -63,14 +63,14 @@ class FilePanel(urwid.WidgetWrap):
         excluded_filenames: set[str] = set(),
         on_selection_change: Callable[[str], None] | None = None,
         on_enter: Callable[[str | None], None] | None = None,
-        on_open: Callable[[str | None], None] | None = None,
+        on_toggle_include: Callable[[str | None], None] | None = None,
         loop: Any | None = None,
         scroll_rate: float = 2.0,
     ) -> None:
         self._sources = sources
         self._on_selection_change = on_selection_change
         self._on_enter = on_enter
-        self._on_open = on_open
+        self._on_toggle_include = on_toggle_include
         self._loop = loop
         self._scroll_rate = scroll_rate
         self._scroll_offset = 0
@@ -167,8 +167,8 @@ class FilePanel(urwid.WidgetWrap):
             if self._on_enter:
                 self._on_enter(self.selected_filename)
             return None
-        if key == "ctrl o":
-            if self._on_open:
-                self._on_open(self.selected_filename)
+        if key == "t":
+            if self._on_toggle_include:
+                self._on_toggle_include(self.selected_filename)
             return None
         return self._w.keypress(size, key)

@@ -3,8 +3,6 @@ from __future__ import annotations
 
 import os
 import signal
-import subprocess
-import sys
 import threading
 from dataclasses import replace
 from pathlib import Path
@@ -37,8 +35,8 @@ PALETTE = [
 ]
 
 FOOTER_HINT = (
-    "↑↓/^P^N navigate · Enter open · Tab cycle fields · "
-    "Esc back · ^G settings · ^W write · ^R reload · ^O open · ^C quit · ^B build"
+    "↑↓/^P^N navigate · Enter open · t toggle include · Tab cycle fields · "
+    "Esc back · ^G settings · ^W write · ^R reload · ^C quit · ^B build"
 )
 
 Mode = Literal["file", "image", "gallery", "build"]
@@ -82,7 +80,7 @@ class SGUIApp:
             excluded_filenames=self._excluded_filenames(),
             on_selection_change=self._on_selection_change,
             on_enter=self._on_file_enter,
-            on_open=lambda _: self._open_current_image(),
+            on_toggle_include=self._toggle_include,
             scroll_rate=global_config.scroll_rate,
         )
 
@@ -142,8 +140,6 @@ class SGUIApp:
             self._save_all()
         elif key == "ctrl r":
             self._reload_sources()
-        elif key == "ctrl o":
-            self._open_current_image()
         elif key == "q":
             self._quit()
         elif key == "esc":
@@ -234,6 +230,16 @@ class SGUIApp:
         if filename:
             self._set_mode("image")
 
+    def _toggle_include(self, filename: str | None) -> None:
+        if not filename:
+            return
+        img = self._config.images.get(filename, {})
+        current = self._staged.get_current(filename, "include", img.get("include", True))
+        self._staged.stage(filename, "include", img.get("include", True), not current)
+        self._sync_file_panel_marks()
+        if self._loop:
+            self._loop.draw_screen()
+
     def _on_selection_change(self, filename: str) -> None:
         if self._loop and self._preview_alarm:
             self._loop.remove_alarm(self._preview_alarm)
@@ -292,20 +298,6 @@ class SGUIApp:
         self._set_mode("file")
         if self._sources and self._loop:
             self._loop.set_alarm_in(0, lambda loop, _: self._fire_first_preview())
-
-    def _open_current_image(self) -> None:
-        filename = self._file_panel.selected_filename
-        if not filename:
-            return
-        path = self._in_dir / filename
-        if not path.exists():
-            return
-        if sys.platform == "darwin":
-            subprocess.Popen(["open", str(path)])
-        elif sys.platform == "win32":
-            os.startfile(str(path))
-        else:
-            subprocess.Popen(["xdg-open", str(path)])
 
     # ── save / revert ──────────────────────────────────────────────────────
 
