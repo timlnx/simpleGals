@@ -13,13 +13,13 @@ and in return you get some simple HTML files with thumbnails.
 # Tech Stack
 
 - [Python](https://www.python.org/) >= 3.10
-- [term-image](git+https://github.com/AnonymouX47/term-image.git)
+- [term-image](https://pypi.org/project/term-image/) for terminal image rendering
 - A terminal emulator with **any** of the following:
 
   - support for the [Kitty graphics protocol](https://sw.kovidgoyal.net/kitty/graphics-protocol/)
   - support for the [iTerm2 inline image protocol](https://iterm2.com/documentation-images.html)
   - Unicode and direct-color (truecolor) support
-- My [bitmath](git+https://github.com/timlnx/bitmath.git) library for file size printing and math
+- [bitmath](https://pypi.org/project/bitmath/) for file size printing and math
 
 (I told you, it's simple)
 
@@ -77,7 +77,7 @@ metadata has not changed for the input/thumbnail files
 * setting: `preview_delay`
 * description: delay before generating image metadata thumbnail the first time
 * type: `int`
-* default: `75ms`
+* default: `125ms`
 
 Image thumbnails are displayed in the console using the `term-image` library. A
 preview will take up no more than 55% of the available horizontal/vertical space
@@ -89,7 +89,12 @@ Pressing tab switches cursor focus between the file panel and the main usage win
 
 Settings are saved in JSON format.
 
-Gallery metadata in the `.meta` directory includes a `cache/` directory with thumbnail images for the sgui browser. The file names are simply mapped back to the source images based on sha checksum (TODO: OR SOME OTHER FAST AND RELIABLE SIGNATURE METHOD). A simple YAML file records source image names (relative to the `in/` directory) and original image checksums, modification times, and preview generation times.
+Gallery metadata lives in `.meta/`. For each source image `foo.jpg`, the directory contains:
+
+- `foo.jpg.json` — sidecar JSON: records mtime, sha256, settings hash, and paths to generated artifacts
+- `foo_thumb.jpg` — cached thumbnail for the `sgui` preview panel
+
+Staleness is determined by mtime first (fast), sha256 second (handles touched-but-unchanged files), then a settings hash to detect config changes. Artifact existence is also verified — if a sidecar exists but the output files are gone, they are regenerated. On each build, any `.meta/` entries whose source image is no longer present in `in/` are pruned, along with their corresponding `out/` files.
 
 
 
