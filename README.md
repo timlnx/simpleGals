@@ -12,7 +12,7 @@ and in return you get some simple HTML files with thumbnails.
 
 # Tech Stack
 
-- [Python](https://www.python.org/) >= 3.12
+- [Python](https://www.python.org/) >= 3.10
 - [term-image](git+https://github.com/AnonymouX47/term-image.git)
 - A terminal emulator with **any** of the following:
 

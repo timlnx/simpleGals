@@ -13,7 +13,7 @@ Both commands operate in the current working directory, auto-creating `in/` (inp
 
 ## Tech Stack
 
-- Python >= 3.12
+- Python >= 3.10
 - [`term-image`](https://github.com/AnonymouX47/term-image) for terminal image rendering (requires Kitty graphics protocol, iTerm2 inline image protocol, or Unicode truecolor support)
 
 ## Planned Architecture

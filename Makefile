@@ -8,10 +8,10 @@ build: clean-dist
 	$(PYTHON) -m build
 
 publish-test: build
-	$(TWINE) upload --repository testpypi dist/*
+	$(TWINE) upload --verbose --repository simplegalstest dist/*
 
 publish: build
-	$(TWINE) upload dist/*
+	$(TWINE) upload --verbose --repository simplegalsprod dist/*
 
 test:
 	$(VENV)/bin/pytest tests/
