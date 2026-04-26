@@ -17,14 +17,21 @@ def _truncate(text: str, width: int) -> str:
 class SelectableImageRow(urwid.WidgetWrap):
     """One selectable row in the file list."""
 
-    def __init__(self, filename: str, dirty: bool = False) -> None:
+    def __init__(self, filename: str, dirty: bool = False, excluded: bool = False) -> None:
         self.filename = filename
         self.dirty = dirty
+        self.excluded = excluded
         self._icon = urwid.SelectableIcon(self._make_label(), cursor_position=0, wrap="clip")
         super().__init__(self._make_attrmap())
 
     def _make_attrmap(self) -> urwid.AttrMap:
-        return urwid.AttrMap(self._icon, "dirty" if self.dirty else None, "selected")
+        if self.dirty:
+            attr = "dirty"
+        elif self.excluded:
+            attr = "excluded"
+        else:
+            attr = None
+        return urwid.AttrMap(self._icon, attr, "selected")
 
     @property
     def label(self) -> str:
@@ -33,8 +40,9 @@ class SelectableImageRow(urwid.WidgetWrap):
     def _make_label(self) -> str:
         return ("* " if self.dirty else "  ") + self.filename
 
-    def update_dirty(self, dirty: bool) -> None:
+    def update_marks(self, dirty: bool, excluded: bool) -> None:
         self.dirty = dirty
+        self.excluded = excluded
         self._icon.set_text(self._make_label())
         self._w = self._make_attrmap()
 
@@ -52,21 +60,24 @@ class FilePanel(urwid.WidgetWrap):
         self,
         sources: list[Path],
         dirty_filenames: set[str],
+        excluded_filenames: set[str] = set(),
         on_selection_change: Callable[[str], None] | None = None,
         on_enter: Callable[[str | None], None] | None = None,
+        on_open: Callable[[str | None], None] | None = None,
         loop: Any | None = None,
         scroll_rate: float = 2.0,
     ) -> None:
         self._sources = sources
         self._on_selection_change = on_selection_change
         self._on_enter = on_enter
+        self._on_open = on_open
         self._loop = loop
         self._scroll_rate = scroll_rate
         self._scroll_offset = 0
         self._scroll_alarm: Any | None = None
         self._last_col = 0
         self._rows: list[SelectableImageRow] = [
-            SelectableImageRow(s.name, dirty=s.name in dirty_filenames)
+            SelectableImageRow(s.name, dirty=s.name in dirty_filenames, excluded=s.name in excluded_filenames)
             for s in sources
         ]
         self._walker = urwid.SimpleFocusListWalker(self._rows)
@@ -131,9 +142,21 @@ class FilePanel(urwid.WidgetWrap):
         delay = 1.0 / self._scroll_rate if self._scroll_rate > 0 else 0.5
         self._scroll_alarm = loop.set_alarm_in(delay, self._tick_scroll)
 
-    def update_dirty(self, dirty_filenames: set[str]) -> None:
+    def reload(self, sources: list[Path], dirty_filenames: set[str], excluded_filenames: set[str] = set()) -> None:
+        self._cancel_scroll()
+        self._sources = sources
+        self._rows = [
+            SelectableImageRow(s.name, dirty=s.name in dirty_filenames, excluded=s.name in excluded_filenames)
+            for s in sources
+        ]
+        focus = min(self._walker.focus or 0, max(0, len(self._rows) - 1))
+        self._walker[:] = self._rows
+        if self._rows:
+            self._walker.set_focus(focus)
+
+    def update_marks(self, dirty_filenames: set[str], excluded_filenames: set[str]) -> None:
         for row in self._rows:
-            row.update_dirty(row.filename in dirty_filenames)
+            row.update_marks(row.filename in dirty_filenames, row.filename in excluded_filenames)
 
     def keypress(self, size, key: str) -> str | None:
         if key in ("up", "ctrl p"):
@@ -143,5 +166,9 @@ class FilePanel(urwid.WidgetWrap):
         if key == "enter":
             if self._on_enter:
                 self._on_enter(self.selected_filename)
+            return None
+        if key == "ctrl o":
+            if self._on_open:
+                self._on_open(self.selected_filename)
             return None
         return self._w.keypress(size, key)

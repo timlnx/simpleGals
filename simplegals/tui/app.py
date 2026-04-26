@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import os
 import signal
+import subprocess
+import sys
 import threading
 from dataclasses import replace
 from pathlib import Path
@@ -10,7 +12,7 @@ from typing import Literal
 
 import urwid
 
-from ..core.config import GlobalConfig, ProjectConfig
+from ..core.config import GlobalConfig, ProjectConfig, save_project_config
 from ..core.gallery import build, ensure_project_dirs, scan_sources
 from ..core.processor import generate_sgui_thumb
 from ..workers.progress import ProgressState
@@ -29,13 +31,14 @@ PALETTE = [
     ("footer", "white", "dark blue"),
     ("selected", "black", "light gray"),
     ("dirty", "yellow", "default"),
+    ("excluded", "dark gray", "default"),
     ("button", "black", "light cyan"),
     ("button_focus", "white,bold", "dark cyan"),
 ]
 
 FOOTER_HINT = (
     "↑↓/^P^N navigate · Enter open · Tab cycle fields · "
-    "Esc back · ^G settings · ^W write out settings · ^C quit · ^B build"
+    "Esc back · ^G settings · ^W write · ^R reload · ^O open · ^C quit · ^B build"
 )
 
 Mode = Literal["file", "image", "gallery", "build"]
@@ -76,8 +79,10 @@ class SGUIApp:
         self._file_panel = FilePanel(
             self._sources,
             dirty_filenames=set(),
+            excluded_filenames=self._excluded_filenames(),
             on_selection_change=self._on_selection_change,
             on_enter=self._on_file_enter,
+            on_open=lambda _: self._open_current_image(),
             scroll_rate=global_config.scroll_rate,
         )
 
@@ -120,6 +125,10 @@ class SGUIApp:
                     pass
 
         signal.signal(signal.SIGINT, _sigint)
+        if not self._sources:
+            self._loop.set_alarm_in(0, lambda loop, _: self._show_empty_dir_modal())
+        else:
+            self._loop.set_alarm_in(0, lambda loop, _: self._fire_first_preview())
         self._loop.run()
 
     # ── keyboard dispatch ──────────────────────────────────────────────────
@@ -131,6 +140,10 @@ class SGUIApp:
             self._toggle_gallery_mode()
         elif key == "ctrl w":
             self._save_all()
+        elif key == "ctrl r":
+            self._reload_sources()
+        elif key == "ctrl o":
+            self._open_current_image()
         elif key == "q":
             self._quit()
         elif key == "esc":
@@ -187,9 +200,31 @@ class SGUIApp:
 
     # ── settings field callbacks ───────────────────────────────────────────
 
+    def _excluded_filenames(self) -> set[str]:
+        excluded = set()
+        for s in self._sources:
+            img = self._config.images.get(s.name, {})
+            if not self._staged.get_current(s.name, "include", img.get("include", True)):
+                excluded.add(s.name)
+        return excluded
+
+    def _sync_file_panel_marks(self) -> None:
+        self._file_panel.update_marks(set(self._staged.dirty_keys()), self._excluded_filenames())
+
+    def _prune_stale_config_entries(self) -> None:
+        current_names = {s.name for s in self._sources}
+        stale = [k for k in self._config.images if k not in current_names]
+        if stale:
+            images = dict(self._config.images)
+            for k in stale:
+                del images[k]
+                self._staged.revert(k)
+            self._config.images = images
+            save_project_config(self._config, self._config_path)
+
     def _on_field_change(self) -> None:
         """Called by settings panels when a widget value changes — refresh dirty marks."""
-        self._file_panel.update_dirty(set(self._staged.dirty_keys()))
+        self._sync_file_panel_marks()
         if self._loop:
             self._loop.draw_screen()
 
@@ -223,6 +258,55 @@ class SGUIApp:
         self._preview.load(thumb_path)
         loop.draw_screen()
 
+    def _fire_first_preview(self) -> None:
+        filename = self._file_panel.selected_filename
+        if filename and self._loop:
+            self._fire_preview(self._loop, filename)
+
+    def _show_empty_dir_modal(self) -> None:
+        close_btn = urwid.Button("OK", on_press=self._close_overlay)
+        body = urwid.Pile([
+            urwid.Text("No images found in in/", align="center"),
+            urwid.Divider(),
+            urwid.Text(
+                f"Add images to {self._in_dir}\nthen press Ctrl+R to reload.",
+                align="center",
+            ),
+            urwid.Divider(),
+            urwid.Padding(close_btn, "center", 6),
+        ])
+        self._push_overlay(body, width=60, height=10)
+
+    def _reload_sources(self) -> None:
+        if self._loop and self._preview_alarm:
+            self._loop.remove_alarm(self._preview_alarm)
+            self._preview_alarm = None
+        self._sources = scan_sources(self._in_dir)
+        self._prune_stale_config_entries()
+        self._file_panel.reload(
+            self._sources,
+            set(self._staged.dirty_keys()),
+            self._excluded_filenames(),
+        )
+        self._preview.clear()
+        self._set_mode("file")
+        if self._sources and self._loop:
+            self._loop.set_alarm_in(0, lambda loop, _: self._fire_first_preview())
+
+    def _open_current_image(self) -> None:
+        filename = self._file_panel.selected_filename
+        if not filename:
+            return
+        path = self._in_dir / filename
+        if not path.exists():
+            return
+        if sys.platform == "darwin":
+            subprocess.Popen(["open", str(path)])
+        elif sys.platform == "win32":
+            os.startfile(str(path))
+        else:
+            subprocess.Popen(["xdg-open", str(path)])
+
     # ── save / revert ──────────────────────────────────────────────────────
 
     def _save_current(self) -> None:
@@ -235,17 +319,17 @@ class SGUIApp:
 
     def _save_key(self, key: str) -> None:
         self._config = self._staged.commit_key(key, self._config, self._config_path)
-        self._file_panel.update_dirty(set(self._staged.dirty_keys()))
+        self._sync_file_panel_marks()
         self._set_mode(self._mode)
 
     def _revert_key(self, key: str) -> None:
         self._staged.revert(key)
-        self._file_panel.update_dirty(set(self._staged.dirty_keys()))
+        self._sync_file_panel_marks()
         self._set_mode(self._mode)
 
     def _save_all(self) -> None:
         self._config = self._staged.commit_all(self._config, self._config_path)
-        self._file_panel.update_dirty(set())
+        self._sync_file_panel_marks()
         self._set_mode("file")
 
     # ── quit ───────────────────────────────────────────────────────────────
@@ -322,6 +406,8 @@ class SGUIApp:
         if b"\x01" in data:
             self._show_build_error_modal()
         elif b"\x02" in data:
+            self._prune_stale_config_entries()
+            self._sync_file_panel_marks()
             self._set_mode("file")
         if b"\x03" in data:
             self._quit()
