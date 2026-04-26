@@ -87,7 +87,7 @@ def test_render_gallery_excludes_flagged_images(tmp_path):
     records = _make_records(out_dir, names)
     records[1]["include"] = False
     render_gallery(out_dir, config, records)
-    index_html = (out_dir / "index.html").read_text()
+    index_html = (out_dir / "index.html").read_text(encoding="utf-8")
     assert "a_item.html" in index_html
     assert "b_item.html" not in index_html
 
@@ -99,7 +99,7 @@ def test_page2_prev_link_points_to_index(tmp_path):
     config = ProjectConfig(layout=Layout(columns=2, rows=2))
     records = _make_records(out_dir, names)
     render_gallery(out_dir, config, records)
-    page2_html = (out_dir / "page-2.html").read_text()
+    page2_html = (out_dir / "page-2.html").read_text(encoding="utf-8")
     assert 'href="index.html"' in page2_html
     assert 'href="page-1.html"' not in page2_html
 
@@ -111,7 +111,7 @@ def test_item_page_image_is_hyperlink(tmp_path):
     config = ProjectConfig(layout=Layout(columns=2, rows=10))
     records = _make_records(out_dir, names)
     render_gallery(out_dir, config, records)
-    item_html = (out_dir / "a_item.html").read_text()
+    item_html = (out_dir / "a_item.html").read_text(encoding="utf-8")
     assert '<a href=' in item_html
     assert 'a.jpg' in item_html
 
@@ -123,7 +123,7 @@ def test_item_page_has_download_link(tmp_path):
     config = ProjectConfig(layout=Layout(columns=2, rows=10))
     records = _make_records(out_dir, names)
     render_gallery(out_dir, config, records)
-    item_html = (out_dir / "a_item.html").read_text()
+    item_html = (out_dir / "a_item.html").read_text(encoding="utf-8")
     assert 'download' in item_html
     assert '💾' in item_html
 
