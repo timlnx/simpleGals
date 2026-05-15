@@ -149,6 +149,8 @@ class GallerySettingsPanel(urwid.WidgetWrap):
         self.desc_field = urwid.Edit("Description: ", edit_text=_v("description", config.description))
         self.quality_field = urwid.Edit("Quality:     ", edit_text=_v("quality", config.quality))
         self.copyright_field = urwid.Edit("Copyright:   ", edit_text=_v("copyright", config.copyright))
+        self.author_field = urwid.Edit("Author:      ", edit_text=_v("author", config.author))
+        self.site_url_field = urwid.Edit("Site URL:    ", edit_text=_v("site_url", config.site_url))
         self.columns_field = urwid.Edit(
             "Columns:     ",
             edit_text=str(staged.get_current("gallery", "layout_columns", config.layout.columns)),
@@ -201,6 +203,14 @@ class GallerySettingsPanel(urwid.WidgetWrap):
             staged.stage("gallery", "layout_rows", config.layout.rows, val)
             _notify()
 
+        def _on_author_change(widget, _old):
+            staged.stage("gallery", "author", config.author, widget.edit_text)
+            _notify()
+
+        def _on_site_url_change(widget, _old):
+            staged.stage("gallery", "site_url", config.site_url, widget.edit_text)
+            _notify()
+
         def _on_template_change(widget, _old):
             staged.stage("gallery", "template", config.template or "", widget.edit_text)
             _notify()
@@ -209,6 +219,8 @@ class GallerySettingsPanel(urwid.WidgetWrap):
         urwid.connect_signal(self.desc_field, "postchange", _on_desc_change)
         urwid.connect_signal(self.quality_field, "postchange", _on_quality_change)
         urwid.connect_signal(self.copyright_field, "postchange", _on_copyright_change)
+        urwid.connect_signal(self.author_field, "postchange", _on_author_change)
+        urwid.connect_signal(self.site_url_field, "postchange", _on_site_url_change)
         urwid.connect_signal(self.columns_field, "postchange", _on_columns_change)
         urwid.connect_signal(self.rows_field, "postchange", _on_rows_change)
         urwid.connect_signal(self.template_field, "postchange", _on_template_change)
@@ -218,8 +230,11 @@ class GallerySettingsPanel(urwid.WidgetWrap):
             urwid.Divider(),
             self.title_field,
             self.desc_field,
-            self.quality_field,
             self.copyright_field,
+            self.author_field,
+            self.site_url_field,
+            urwid.Text("  e.g. https://photos.example.com/gallery  (used for OG/social preview links)"),
+            self.quality_field,
             self.columns_field,
             self.rows_field,
             self.template_field,
