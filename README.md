@@ -64,9 +64,9 @@ On the right using the remainder of the visible space is the general gallery
 settings input panel. This panel is also where previewing and editing properties
 of individual images takes place.
 
-Pressing escape at any time shifts focus to the general gallery settings where
-parameters like max columns/rows/per page/description information can be
-provided. Press escape again to go back to the selection mode.
+Press **Ctrl+G** to open the gallery settings panel where parameters like title,
+description, columns, rows, site URL, and more can be configured. Press
+**Escape** to return to the file selection mode.
 
 When moving the selection cursor between images in the file panel there is a
 brief delay before the thumbnail is loaded the first time so you can page
@@ -85,22 +85,103 @@ on the panel on the right.
 
 Pressing tab switches cursor focus between the file panel and the main usage window.
 
+## sgui keyboard shortcuts
+
+| Key | Action |
+|-----|--------|
+| ↑ / ↓ or Ctrl+P / Ctrl+N | Navigate file list |
+| Enter | Open image settings for selected file |
+| t | Toggle selected image include/exclude |
+| Tab | Cycle focus between panels and fields |
+| Escape | Return to file selection mode |
+| Ctrl+G | Open gallery settings panel |
+| Ctrl+W | Save all staged changes |
+| Ctrl+R | Reload source images from `in/` |
+| Ctrl+B | Build gallery |
+| q | Quit (prompts to save if unsaved changes) |
+
+
 # Settings
 
 Settings are saved in JSON format.
 
-Gallery metadata lives in `.meta/`. For each source image `foo.jpg`, the directory contains:
+## Global settings (`~/Library/Application Support/simplegals/config.json` on macOS)
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `file_panel_width` | `int` or `int%` | `30` | Width of the file tree panel |
+| `scroll_rate` | `float` | `2.0` | Marquee scroll rate (chars/sec) for truncated filenames |
+| `preview_delay` | `int` (ms) | `125` | Delay before generating a thumbnail preview the first time |
+
+## Gallery settings (`simpleGal.json` in the project directory)
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `title` | `str` | `"Gallery"` | Gallery title shown in the header and OG tags |
+| `description` | `str` | `""` | Gallery description shown below the title |
+| `copyright` | `str` | `""` | Copyright string embedded in JPEG EXIF and the footer |
+| `author` | `str` | `""` | Author name for `<meta name="author">` |
+| `site_url` | `str` | `""` | Absolute base URL (e.g. `https://photos.example.com/summit`) — enables OG/social preview tags |
+| `quality` | `int` | `90` | JPEG output quality (0–100) |
+| `columns` | `int` | `4` | Thumbnail grid columns per page |
+| `rows` | `int` | `5` | Thumbnail grid rows per page |
+| `template` | `str\|None` | `None` | Path to a custom template directory |
+
+## Gallery metadata (`/.meta/`)
+
+For each source image `foo.jpg`, the `.meta/` directory contains:
 
 - `foo.jpg.json` — sidecar JSON: records mtime, sha256, settings hash, and paths to generated artifacts
 - `foo_thumb.jpg` — cached thumbnail for the `sgui` preview panel
 
 Staleness is determined by mtime first (fast), sha256 second (handles touched-but-unchanged files), then a settings hash to detect config changes. Artifact existence is also verified — if a sidecar exists but the output files are gone, they are regenerated. On each build, any `.meta/` entries whose source image is no longer present in `in/` are pruned, along with their corresponding `out/` files.
 
+## Output image tiers (`/out/`)
+
+simpleGals generates up to three versions of each image:
+
+| File | Max dimensions | Notes |
+|------|---------------|-------|
+| `foo.jpg` | Original size | Full original; linked from individual item pages |
+| `foo_display.jpg` | 2048×2048 px | Only generated when the original exceeds 2 MiB; shown on item pages in place of the full original |
+| `foo_thumb.jpg` | 600×450 px | Used in the thumbnail grid on gallery index pages |
 
 
+# Generated gallery features
+
+## Keyboard navigation
+
+The generated HTML pages include keyboard shortcuts:
+
+| Key | Page type | Action |
+|-----|-----------|--------|
+| ← / → | Item page | Previous / next image (no wrap-around at ends) |
+| u | Item page | Return to the gallery page and scroll to the image's thumbnail row |
+| ← / → | Paginated index | Previous / next page (no wrap-around) |
+| u | All-images page | Return to the paginated index |
+
+## Social / OG preview tags
+
+When `site_url` is set in the gallery config, every generated page emits
+`og:*` and `twitter:*` meta tags. This enables rich link previews when sharing
+URLs on Slack, iMessage, Discord, LinkedIn, and similar platforms. The preview
+image used is the thumbnail for that page.
+
+`site_url` must be a full absolute URL with no trailing slash, e.g.:
+```
+https://photos.example.com/summit-2026
+```
+
+## Share button
+
+Each individual item page has a 🔗 button in the image metadata row. Clicking
+it copies a clean shareable URL (query parameters and fragment stripped) to the
+clipboard. Hover over the button to reveal the "copy link to clipboard" label.
+When `site_url` is configured the copied URL uses it as the base; otherwise the
+current page URL is used with params stripped.
 
 
 # Reference Material
 
 * base library: https://github.com/AnonymouX47/term-image
-* example usage: https://github.com/AnonymouX47/termvisage 
+* example usage: https://github.com/AnonymouX47/termvisage
