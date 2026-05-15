@@ -9,8 +9,13 @@
   <style>:root { --columns: {{ columns }}; }</style>
 </head>
 <body>
+  <div class="key-legend"><kbd>←</kbd> prev · <kbd>→</kbd> next · <kbd>u</kbd> up</div>
   <header>
+    {% if is_all_page %}
+    <h1><a href="index.html" class="back-link">{{ title }}<span class="back-hint">← back to page listing</span></a></h1>
+    {% else %}
     <h1>{{ title }}</h1>
+    {% endif %}
     {% if description %}<p>{{ description }}</p>{% endif %}
   </header>
 
@@ -35,8 +40,8 @@
 
   <div class="gallery-grid">
     {% for image in images %}
-    <div class="gallery-item">
-      <a href="{{ image.item_page }}">
+    <div class="gallery-item" id="{{ image.filename }}">
+      <a href="{{ image.item_page }}?from={% if is_all_page %}all.html{% elif current_page == 1 %}index.html{% else %}page-{{ current_page }}.html{% endif %}&amp;anchor={{ image.filename }}">
         <img src="{{ image.thumb_path }}" alt="{{ image.alt or image.filename }}">
       </a>
       {% if image.caption %}
@@ -48,6 +53,23 @@
 
   <footer>
     {% if copyright %}{{ copyright }}{% endif %}
+    <p class="generated-by"><a href="https://github.com/timlnx/simpleGals" target="_blank" rel="noopener noreferrer">generated with simpleGals</a></p>
   </footer>
+  {% if is_all_page %}
+  <script>
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'u' || e.key === 'U') window.location.href = 'index.html';
+    });
+  </script>
+  {% else %}
+  <script>
+    const prev = {{ ('index.html' if current_page == 2 else 'page-' ~ (current_page - 1) ~ '.html') | tojson if current_page > 1 else 'null' }};
+    const next = {{ ('page-' ~ (current_page + 1) ~ '.html') | tojson if current_page < total_pages else 'null' }};
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'ArrowLeft' && prev) window.location.href = prev;
+      if (e.key === 'ArrowRight' && next) window.location.href = next;
+    });
+  </script>
+  {% endif %}
 </body>
 </html>
