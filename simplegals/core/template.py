@@ -58,6 +58,8 @@ def render_gallery(
         "title": config.title,
         "description": config.description,
         "copyright": config.copyright,
+        "author": config.author,
+        "site_url": config.site_url.rstrip("/") if config.site_url else "",
         "columns": config.layout.columns,
         "css_path": "style.css",
         "total_pages": total_pages,

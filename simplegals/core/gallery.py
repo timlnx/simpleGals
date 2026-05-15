@@ -84,6 +84,7 @@ def prune_removed_sources(
         (meta_dir / f"{stem}_thumb{ext}").unlink(missing_ok=True)
         (out_dir / name).unlink(missing_ok=True)
         (out_dir / f"{stem}_thumb{ext}").unlink(missing_ok=True)
+        (out_dir / f"{stem}_display{ext}").unlink(missing_ok=True)
         (out_dir / f"{stem}_item.html").unlink(missing_ok=True)
         removed += 1
     return removed
@@ -193,10 +194,12 @@ def build(
         img_config = config.images.get(source.name, {})
         size_str = bitmath.getsize(str(source), bestprefix=True).format("{value:.2f} {unit}")
         mtime_dt = datetime.fromtimestamp(source.stat().st_mtime, tz=timezone.utc)
+        display_name = f"{source.stem}_display{source.suffix}"
         raw_records.append({
             "filename": source.name,
             "output_path": source.name,
             "thumb_path": f"{source.stem}_thumb{source.suffix}",
+            "display_path": display_name if (out_dir / display_name).exists() else source.name,
             "caption": img_config.get("caption", ""),
             "alt": img_config.get("alt", ""),
             "include": img_config.get("include", True),

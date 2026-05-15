@@ -27,6 +27,8 @@ class ProjectConfig:
     layout: Layout = field(default_factory=Layout)
     quality: int = 90
     copyright: str = ""
+    site_url: str = ""
+    author: str = ""
     template: str | None = None
     images: dict = field(default_factory=dict)
 

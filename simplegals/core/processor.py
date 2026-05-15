@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import bitmath
 import piexif
 from PIL import Image, ImageOps
 
@@ -9,10 +10,16 @@ from .config import ProjectConfig
 
 SGUI_THUMB_MAX: tuple[int, int] = (800, 800)
 HTML_THUMB_MAX: tuple[int, int] = (600, 450)
+DISPLAY_MAX_BYTES: bitmath.MiB = bitmath.MiB(2)
+DISPLAY_MAX_DIM: tuple[int, int] = (2048, 2048)
 
 
 def _thumb_name(source: Path) -> str:
     return f"{source.stem}_thumb{source.suffix}"
+
+
+def _display_name(source: Path) -> str:
+    return f"{source.stem}_display{source.suffix}"
 
 
 def generate_sgui_thumb(source: Path, meta_dir: Path) -> Path:
@@ -29,8 +36,12 @@ def generate_output(
     source: Path,
     out_dir: Path,
     config: ProjectConfig,
-) -> tuple[Path, Path]:
-    """Generate out/<filename>.<ext> and out/<stem>_thumb<ext>. Returns (output_path, thumb_path)."""
+) -> tuple[Path, Path, Path | None]:
+    """Generate full output, optional display image (≤2 MB), and thumbnail.
+
+    Returns (output_path, thumb_path, display_path).
+    display_path is None when the original is already within the size limit.
+    """
     output_path = out_dir / source.name
     thumb_path = out_dir / _thumb_name(source)
 
@@ -46,10 +57,21 @@ def generate_output(
             save_kwargs["icc_profile"] = icc
         img.save(output_path, **_format_save_kwargs(source, save_kwargs))
 
+        display_path: Path | None = None
+        if bitmath.getsize(output_path) > DISPLAY_MAX_BYTES:
+            display_path = out_dir / _display_name(source)
+            display_img = img.copy()
+            display_img.thumbnail(DISPLAY_MAX_DIM, Image.LANCZOS)
+            dk: dict = {"quality": 85}
+            if icc:
+                dk["icc_profile"] = icc
+            display_img.save(display_path, **_format_save_kwargs(source, dk))
+            del display_img
+
         img.thumbnail(HTML_THUMB_MAX, Image.LANCZOS)
         img.save(thumb_path, **_format_save_kwargs(source, save_kwargs))
 
-    return output_path, thumb_path
+    return output_path, thumb_path, display_path
 
 
 def _format_save_kwargs(source: Path, kwargs: dict) -> dict:

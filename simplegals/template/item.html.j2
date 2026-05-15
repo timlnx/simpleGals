@@ -5,6 +5,19 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ title }} — {{ image.filename }}</title>
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="{{ title }}">
+  <meta property="og:title" content="{{ image.caption or image.filename }}">
+  {% if image.caption or description %}<meta property="og:description" content="{{ image.caption or description }}">{% endif %}
+  {% if site_url %}
+  <meta property="og:image" content="{{ site_url }}/{{ image.thumb_path }}">
+  <meta property="og:url" content="{{ site_url }}/{{ image.item_page }}">
+  {% endif %}
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{ image.caption or image.filename }}">
+  {% if image.caption or description %}<meta name="twitter:description" content="{{ image.caption or description }}">{% endif %}
+  {% if site_url %}<meta name="twitter:image" content="{{ site_url }}/{{ image.thumb_path }}">{% endif %}
+  {% if author %}<meta name="author" content="{{ author }}">{% endif %}
   <link rel="stylesheet" href="{{ css_path }}">
 </head>
 <body>
@@ -14,7 +27,7 @@
     </header>
 
     <a href="{{ image.output_path }}">
-      <img src="{{ image.output_path }}" alt="{{ image.alt or image.filename }}">
+      <img src="{{ image.display_path }}" alt="{{ image.alt or image.filename }}">
     </a>
 
     <div class="item-meta">

@@ -5,6 +5,21 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ title }}{% if not is_all_page and total_pages > 1 %} — Page {{ current_page }} of {{ total_pages }}{% endif %}</title>
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="{{ title }}">
+  <meta property="og:title" content="{{ title }}{% if not is_all_page and total_pages > 1 %} — Page {{ current_page }} of {{ total_pages }}{% endif %}">
+  {% if description %}<meta property="og:description" content="{{ description }}">{% endif %}
+  {% if site_url and images %}
+  <meta property="og:image" content="{{ site_url }}/{{ images[0].thumb_path }}">
+  {% endif %}
+  {% if site_url %}
+  <meta property="og:url" content="{{ site_url }}/{% if is_all_page %}all.html{% elif current_page == 1 %}index.html{% else %}page-{{ current_page }}.html{% endif %}">
+  {% endif %}
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{ title }}">
+  {% if description %}<meta name="twitter:description" content="{{ description }}">{% endif %}
+  {% if site_url and images %}<meta name="twitter:image" content="{{ site_url }}/{{ images[0].thumb_path }}">{% endif %}
+  {% if author %}<meta name="author" content="{{ author }}">{% endif %}
   <link rel="stylesheet" href="{{ css_path }}">
   <style>:root { --columns: {{ columns }}; }</style>
 </head>
