@@ -151,6 +151,23 @@ def test_build_does_not_reextract_exif_when_unchanged(tmp_path, monkeypatch):
     assert calls == [], "EXIF must not be re-extracted when nothing changed"
 
 
+def test_build_produces_zip_when_enabled(tmp_path):
+    proj, out_dir, meta = _proj(tmp_path)
+    build(proj, ProjectConfig(gallery_zip=True))
+    zips = list(out_dir.glob("*.zip"))
+    assert len(zips) == 1
+    # second build with unchanged inputs must not rebuild (incremental skip)
+    mtime1 = zips[0].stat().st_mtime_ns
+    build(proj, ProjectConfig(gallery_zip=True))
+    assert zips[0].stat().st_mtime_ns == mtime1
+
+
+def test_build_no_zip_when_disabled(tmp_path):
+    proj, out_dir, meta = _proj(tmp_path)
+    build(proj, ProjectConfig(gallery_zip=False))
+    assert list(out_dir.glob("*.zip")) == []
+
+
 def test_build_force_rebuilds_all(tmp_project):
     config = ProjectConfig()
     # First build populates the cache

@@ -9,6 +9,7 @@ from pathlib import Path
 
 import bitmath
 
+from . import archive
 from .config import ProjectConfig, settings_hash
 from .exif import extract_exif
 from .metadata import (
@@ -78,6 +79,8 @@ def prune_removed_sources(
     """
     removed = 0
     for sidecar in meta_dir.glob("*.json"):
+        if sidecar.name == archive.STATE_FILE:
+            continue
         name = sidecar.stem  # e.g. "DSC_8297.jpg" (strip trailing .json)
         if name in source_names:
             continue
@@ -143,13 +146,13 @@ def build(
 
     log(f"Tasks: {len(thumb_tasks)} thumb, {len(output_tasks)} output")
 
+    state = ProgressState(
+        thumb_total=len(thumb_tasks),
+        output_total=len(output_tasks),
+    )
     had_errors = False
     if thumb_tasks or output_tasks:
         q: multiprocessing.Queue = multiprocessing.Queue()
-        state = ProgressState(
-            thumb_total=len(thumb_tasks),
-            output_total=len(output_tasks),
-        )
         _done = threading.Event()
 
         def _run_dispatch() -> None:
@@ -226,8 +229,37 @@ def build(
             "exif": sidecar.exif if sidecar else None,
         })
 
+    gallery_zip_ctx = None
+    gallery_zip_size_ctx = None
+    if config.gallery_zip:
+        included = [r["filename"] for r in raw_records if r.get("include", True)]
+        zip_name = archive.gallery_zip_name(config.title)
+        zip_path = out_dir / zip_name
+        manifest = archive.compute_manifest(out_dir, included)
+        zip_state = archive.load_zip_state(meta_dir)
+        if not (zip_path.exists() and zip_state and zip_state.get("manifest") == manifest):
+
+            def _zcb(done: int, total: int) -> None:
+                state.zip_total = total
+                state.zip_done = done
+                if progress_callback:
+                    progress_callback(state)
+
+            count, size = archive.build_zip(out_dir, included, zip_path, _zcb)
+            archive.save_zip_state(meta_dir, {
+                "manifest": manifest, "zip": zip_name, "size": size, "count": count,
+            })
+            log(f"Zipped {count} images -> {zip_name} ({bitmath.Byte(size).best_prefix().format('{value:.0f} {unit}')})")
+        else:
+            size = zip_state["size"]
+            count = zip_state["count"]
+            log(f"Gallery zip up to date ({zip_name})")
+        gallery_zip_ctx = zip_name
+        gallery_zip_size_ctx = bitmath.Byte(size).best_prefix().format("{value:.0f} {unit}")
+
     log("Rendering HTML templates...")
-    render_gallery(out_dir, config, raw_records)
+    render_gallery(out_dir, config, raw_records,
+                   gallery_zip=gallery_zip_ctx, gallery_zip_size=gallery_zip_size_ctx)
     log("Build complete.")
 
     log_path.write_text("\n".join(log_lines) + "\n", encoding="utf-8")

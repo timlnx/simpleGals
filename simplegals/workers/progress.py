@@ -15,6 +15,8 @@ class ProgressState:
     output_done: int = 0
     output_failed: int = 0
     current_file: str = ""
+    zip_total: int = 0
+    zip_done: int = 0
 
 
 def post_status(
@@ -70,4 +72,6 @@ def format_cli_progress(state: ProgressState) -> str:
         bar(state.thumb_done, state.thumb_failed, state.thumb_total, "Previews"),
         bar(state.output_done, state.output_failed, state.output_total, "Output "),
     ]
+    if state.zip_total:
+        lines.append(bar(state.zip_done, 0, state.zip_total, "Zip    "))
     return "\n".join(lines)
