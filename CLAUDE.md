@@ -15,18 +15,40 @@ Both commands operate in the current working directory, auto-creating `in/` (inp
 
 - Python >= 3.10
 - [`term-image`](https://github.com/AnonymouX47/term-image) for terminal image rendering (requires Kitty graphics protocol, iTerm2 inline image protocol, or Unicode truecolor support)
+- [`bitmath`](https://pypi.org/project/bitmath/) >= 2.0.0 for file size display and comparisons (use NIST prefixes: MiB not MB)
 
-## Planned Architecture
+## Architecture
 
-- **`sgui`**: TUI with a split layout — scrollable file tree (left, ~20% width) and settings/preview panel (right). Navigation via arrow keys and Tab to switch focus. Escape toggles between image selection mode and general gallery settings.
+- **`sgui`**: TUI with a split layout — scrollable file tree (left, ~20% width) and settings/preview panel (right). Navigation via arrow keys and Tab to switch focus. Ctrl+G opens gallery settings; Escape returns to file selection mode.
 - **Template system**: A default HTML template ships with the tool; users can fork it and point to a custom template via `--template/-t <TEMPLATE_DIR>` or the `sgui` settings panel.
 - **Thumbnail caching**: `.meta/` stores image metadata and cached thumbnails. On repeat runs, thumbnails are regenerated only when the input file's last-modified time has changed.
-- **Preview behavior**: A configurable delay (`preview_delay`, default 75ms) prevents rapid thumbnail generation while paging through files. First-load generates and caches; subsequent views are instant if unchanged.
+- **Preview behavior**: A configurable delay (`preview_delay`, default 125ms) prevents rapid thumbnail generation while paging through files. First-load generates and caches; subsequent views are instant if unchanged.
+- **Three-tier image pipeline**: For each source image, up to three output files are generated:
+  - `out/foo.jpg` — full original (may have EXIF copyright injected)
+  - `out/foo_display.jpg` — web display image, capped at 2048×2048 px, quality 85; only generated when the original exceeds 2 MiB (`bitmath.MiB(2)`)
+  - `out/foo_thumb.jpg` — grid thumbnail, capped at 600×450 px
+- **OG/social tags**: When `site_url` is set, all generated pages emit `og:*` and `twitter:*` meta tags. `site_url` is normalized (trailing slash stripped) before being passed to Jinja2 templates.
 
-## Key Configuration Settings (in `sgui`)
+## Key Configuration Settings
+
+### Global settings (`GlobalConfig`) — stored in XDG/platform config dir
 
 | Setting | Type | Default | Description |
 |---|---|---|---|
 | `file_panel_width` | `int` or `int%` | `30` | Width of the file tree panel |
 | `scroll_rate` | `float` | `2.0` | Marquee scroll rate (chars/sec) for truncated filenames |
-| `preview_delay` | `int` (ms) | `75` | Delay before generating a thumbnail for the first time |
+| `preview_delay` | `int` (ms) | `125` | Delay before generating a thumbnail for the first time |
+
+### Gallery settings (`ProjectConfig`) — stored in `simpleGal.json`
+
+| Setting | Type | Default | Description |
+|---|---|---|---|
+| `title` | `str` | `"Gallery"` | Gallery title shown in header and OG tags |
+| `description` | `str` | `""` | Gallery description |
+| `copyright` | `str` | `""` | Copyright string embedded in JPEG EXIF and page footer |
+| `author` | `str` | `""` | Author name for `<meta name="author">` |
+| `site_url` | `str` | `""` | Absolute base URL; enables OG image/url tags when set |
+| `quality` | `int` | `90` | JPEG output quality (0–100) |
+| `columns` | `int` | `4` | Thumbnail grid columns per page |
+| `rows` | `int` | `5` | Thumbnail grid rows per page |
+| `template` | `str\|None` | `None` | Path to custom template directory |
