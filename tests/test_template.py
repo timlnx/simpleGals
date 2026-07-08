@@ -136,3 +136,58 @@ def test_render_gallery_copies_css(tmp_path):
     records = _make_records(out_dir, names)
     render_gallery(out_dir, config, records)
     assert (out_dir / "style.css").exists()
+
+
+def _render(tmp_path, records, **cfg):
+    out = tmp_path / "out"
+    out.mkdir()
+    render_gallery(out, ProjectConfig(site_url="https://x.example", **cfg), records)
+    return out
+
+
+def _rec(**kw):
+    base = dict(filename="a.jpg", output_path="a.jpg", thumb_path="a_thumb.jpg",
+                display_path="a.jpg", caption="", alt="", include=True,
+                date="2026-01-01", size="1 MiB", og_path="a_og.jpg", exif=None)
+    base.update(kw)
+    return base
+
+
+def test_og_image_points_at_og_jpg(tmp_path):
+    out = _render(tmp_path, [_rec()], social_previews=True)
+    html = (out / "a_item.html").read_text()
+    assert "a_og.jpg" in html and 'property="og:image"' in html
+
+
+def test_social_tags_suppressed_when_disabled(tmp_path):
+    out = _render(tmp_path, [_rec()], social_previews=False)
+    html = (out / "a_item.html").read_text()
+    assert 'property="og:image"' not in html
+
+
+def test_exif_block_renders_present_fields_only(tmp_path):
+    out = _render(tmp_path, [_rec(exif={"camera": "CANON EOS R5", "exposure": "f/2.8 · ISO 100 · 1/250s"})], exif_display=True)
+    html = (out / "a_item.html").read_text()
+    assert "CANON EOS R5" in html and "class=\"exif\"" in html
+    assert "White balance" not in html   # absent field must not appear
+
+
+def test_exif_block_hidden_without_exif(tmp_path):
+    out = _render(tmp_path, [_rec(exif=None)], exif_display=True)
+    assert "class=\"exif\"" not in (out / "a_item.html").read_text()
+
+
+def test_download_button_on_index_and_all(tmp_path):
+    out = tmp_path / "out"; out.mkdir()
+    render_gallery(out, ProjectConfig(gallery_zip=True), [_rec()],
+                   gallery_zip="My_Gallery.zip", gallery_zip_size="3 MiB")
+    for page in ("index.html", "all.html"):
+        html = (out / page).read_text()
+        assert "My_Gallery.zip" in html
+        assert "Download all (3 MiB)" in html
+
+
+def test_no_download_button_without_zip(tmp_path):
+    out = tmp_path / "out"; out.mkdir()
+    render_gallery(out, ProjectConfig(), [_rec()])
+    assert "download-btn" not in (out / "index.html").read_text()

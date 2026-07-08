@@ -110,7 +110,7 @@ def check_staleness(
 
     current_sha = file_sha256(source)
     if current_sha == sidecar.sha256:
-        # touched but unchanged — refresh stored mtime
+        # touched but unchanged, refresh stored mtime
         sidecar.mtime = current_mtime
         save_sidecar(meta_dir, sidecar)
         thumb_missing, output_missing = _artifacts_exist()

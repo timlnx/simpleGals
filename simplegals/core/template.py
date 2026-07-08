@@ -67,6 +67,8 @@ def render_gallery(
         "total_pages": total_pages,
         "gallery_zip": gallery_zip,
         "gallery_zip_size": gallery_zip_size,
+        "social_previews": config.social_previews,
+        "exif_display": config.exif_display,
     }
 
     for page_num in range(1, total_pages + 1):

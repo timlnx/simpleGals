@@ -172,7 +172,7 @@ def test_build_force_rebuilds_all(tmp_project):
     config = ProjectConfig()
     # First build populates the cache
     build(tmp_project, config)
-    # Second build with fresh cache — nothing to do
+    # Second build with fresh cache, nothing to do
     log_path, _ = build(tmp_project, config)
     log = log_path.read_text()
     assert "Tasks: 0 thumb, 0 output" in log

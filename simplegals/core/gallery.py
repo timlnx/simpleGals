@@ -122,7 +122,7 @@ def build(
         log(f"Pruned {pruned} removed source(s) from out/ and .meta/")
 
     if force:
-        log("Force rebuild requested — skipping cache.")
+        log("Force rebuild requested. Skipping cache.")
 
     thumb_tasks: list[tuple] = []
     output_tasks: list[tuple] = []

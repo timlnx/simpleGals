@@ -38,7 +38,7 @@ def drain_queue(
     state: ProgressState,
     timeout: float = 0.1,
 ) -> ProgressState:
-    # Use a blocking get with timeout — get_nowait() misses items still in the
+    # Use a blocking get with timeout; get_nowait() misses items still in the
     # feeder thread's buffer when the caller itself is the queue writer.
     while True:
         try:
