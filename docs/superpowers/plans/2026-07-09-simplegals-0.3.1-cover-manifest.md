@@ -16,7 +16,7 @@
 - Branding/homepage URL: `https://github.com/simplegals/simpleGals` (org repo; GitHub redirects cover the pre-transfer `timlnx` path).
 - No em-dashes in generated copy or comments; use plain punctuation (`|`, `,`, `.`, `()`).
 - No `Co-Authored-By` or Claude attribution in commit messages.
-- Test runner: `.venv/bin/python -m pytest tests/ -q`. Lint: `.venv/bin/ruff check`.
+- Test runner: `.venv/bin/python -m pytest tests/ -q`.
 - Tests assert the version via `simplegals.__version__` (never a hardcoded `"0.3.1"`), so they pass regardless of the installed VERSION.
 - All existing tests plus the new ones must pass at the end.
 
@@ -665,13 +665,10 @@ In `CLAUDE.md`, in the "Gallery settings (`ProjectConfig`)" table, add a row (pl
 | `cover` | `str` | `""` | Filename in `in/` used as the gallery cover (portfolio thumbnail and gallery-index `og:image`); blank uses the first image |
 ```
 
-- [ ] **Step 4: Run the full suite and lint**
+- [ ] **Step 4: Run the full suite**
 
 Run: `.venv/bin/python -m pytest tests/ -q`
 Expected: PASS (all; original suite plus the new cover/manifest/branding/sgui tests).
-
-Run: `.venv/bin/ruff check`
-Expected: no errors.
 
 - [ ] **Step 5: Commit**
 

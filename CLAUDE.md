@@ -46,6 +46,7 @@ Both commands operate in the current working directory, auto-creating `in/` (inp
 |---|---|---|---|
 | `title` | `str` | `"Gallery"` | Gallery title shown in header and OG tags |
 | `description` | `str` | `""` | Gallery description |
+| `cover` | `str` | `""` | Filename in `in/` used as the gallery cover (portfolio thumbnail and gallery-index `og:image`); blank uses the first image |
 | `copyright` | `str` | `""` | Copyright string embedded in JPEG EXIF and page footer |
 | `author` | `str` | `""` | Author name for `<meta name="author">` |
 | `social_previews` | `bool` | `True` | Emit OG/Twitter tags and generate 1200px `_og` previews (in the source container: `_og.jpg` or `_og.png`) |

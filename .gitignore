@@ -49,9 +49,6 @@ dmypy.json
 .pytype/
 .pyre/
 
-# Linters / formatters
-.ruff_cache/
-
 # Jupyter
 .ipynb_checkpoints
 *.ipynb
