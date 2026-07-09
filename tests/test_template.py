@@ -342,6 +342,7 @@ def test_item_position_context(tmp_path):
     out = tmp_path / "out"
     render_gallery(out, ProjectConfig(template=str(tpl)), _make_records(out, ["a.jpg", "b.jpg", "c.jpg"]))
     assert "n=1 t=3 p=33" in (out / "a_item.html").read_text(encoding="utf-8")
+    assert "n=2 t=3 p=66" in (out / "b_item.html").read_text(encoding="utf-8")  # interior item, 200//3
     assert "n=3 t=3 p=100" in (out / "c_item.html").read_text(encoding="utf-8")
 
 
@@ -359,3 +360,13 @@ def test_total_images_on_grid_page(tmp_path):
     out = tmp_path / "out"
     render_gallery(out, ProjectConfig(template=str(tpl)), _make_records(out, ["a.jpg", "b.jpg"]))
     assert "total=2" in (out / "index.html").read_text(encoding="utf-8")
+
+
+def test_zero_images_renders_without_crash(tmp_path):
+    # Guards the percent divisor: an empty set must render a grid page and never
+    # evaluate (i+1)*100//len(records).
+    tpl = _make_template(tmp_path / "tpl", with_css=False, with_assets=False)
+    out = tmp_path / "out"
+    render_gallery(out, ProjectConfig(template=str(tpl)), _make_records(out, []))
+    assert (out / "index.html").exists()
+    assert "total=0" in (out / "index.html").read_text(encoding="utf-8")
