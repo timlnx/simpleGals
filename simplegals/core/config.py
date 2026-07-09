@@ -32,6 +32,7 @@ class ProjectConfig:
     social_previews: bool = True
     exif_display: bool = True
     gallery_zip: bool = False
+    simple_gals_promo: bool = False
     template: str | None = None
     images: dict = field(default_factory=dict)
 
@@ -83,6 +84,8 @@ def init_project(project_dir: Path, config_path: Path | None = None) -> Path:
     target = config_path or (project_dir / "simpleGal.json")
     if not target.exists():
         save_project_config(ProjectConfig(), target)
+    for sub in ("in", "out"):
+        (project_dir / sub).mkdir(parents=True, exist_ok=True)
     return target
 
 

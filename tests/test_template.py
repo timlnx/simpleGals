@@ -166,7 +166,7 @@ def test_social_tags_suppressed_when_disabled(tmp_path):
 
 
 def test_exif_block_renders_present_fields_only(tmp_path):
-    out = _render(tmp_path, [_rec(exif={"camera": "CANON EOS R5", "exposure": "f/2.8 · ISO 100 · 1/250s"})], exif_display=True)
+    out = _render(tmp_path, [_rec(exif={"camera": "CANON EOS R5", "exposure": "ƒ/2.8 · ISO 100 · 1/250s"})], exif_display=True)
     html = (out / "a_item.html").read_text(encoding="utf-8")
     assert "CANON EOS R5" in html and "class=\"exif\"" in html
     assert "White balance" not in html   # absent field must not appear
@@ -205,3 +205,15 @@ def test_page_og_image_uses_og_path_and_gated(tmp_path):
     off_dir.mkdir()
     out2 = _render(off_dir, [_rec()], social_previews=False)
     assert 'property="og:image"' not in (out2 / "index.html").read_text(encoding="utf-8")
+
+
+def test_promo_footer_hidden_by_default(tmp_path):
+    out = _render(tmp_path, [_rec()])  # simple_gals_promo defaults to False
+    for page in ("index.html", "a_item.html"):
+        assert "generated with simpleGals" not in (out / page).read_text(encoding="utf-8")
+
+
+def test_promo_footer_shown_when_enabled(tmp_path):
+    out = _render(tmp_path, [_rec()], simple_gals_promo=True)
+    for page in ("index.html", "a_item.html"):
+        assert "generated with simpleGals" in (out / page).read_text(encoding="utf-8")

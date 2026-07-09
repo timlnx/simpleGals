@@ -157,7 +157,7 @@ def test_sidecar_roundtrips_og_and_exif(tmp_path):
     sc = ImageSidecar(
         source="a.jpg", mtime="t", sha256="h", settings_hash="s",
         og=OgMeta(path="out/a_og.jpg", generated_at="t"),
-        exif={"camera": "NIKON Z 7", "exposure": "f/5.6 · ISO 100 · 1/125s"},
+        exif={"camera": "NIKON Z 7", "exposure": "ƒ/5.6 · ISO 100 · 1/125s"},
     )
     save_sidecar(tmp_path, sc)
     loaded = load_sidecar(tmp_path, "a.jpg")

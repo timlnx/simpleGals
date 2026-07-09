@@ -1,7 +1,8 @@
 from pathlib import Path
 from PIL import Image
 from PIL.ExifTags import Base
-from simplegals.core.exif import extract_exif
+from PIL.TiffImagePlugin import IFDRational
+from simplegals.core.exif import _shutter, extract_exif
 
 def _make_jpeg_with_exif(path: Path, exif_pairs: dict) -> None:
     img = Image.new("RGB", (8, 8), "white")
@@ -30,7 +31,17 @@ def test_exposure_triangle_string(tmp_path):
         Base.ExposureTime.value: (1, 125),
     })
     out = extract_exif(p)
-    assert out["exposure"] == "f/5.6 · ISO 100 · 1/125s"
+    assert out["exposure"] == "ƒ/5.6 · ISO 100 · 1/125s"
+
+
+def test_shutter_reduces_unreduced_rational():
+    # Cameras commonly store 1/125s as the un-reduced rational 10/1250.
+    # Fraction() copies an IFDRational verbatim without reducing, so we must
+    # reduce it ourselves; regression for the "10/1250s" display bug.
+    assert _shutter(IFDRational(10, 1250)) == "1/125s"
+    assert _shutter((10, 1250)) == "1/125s"
+    assert _shutter(IFDRational(1, 3)) == "1/3s"
+    assert _shutter(IFDRational(2, 1)) == "2s"   # >= 1s renders as seconds
 
 def test_exposure_comp_omitted_when_zero(tmp_path):
     p = tmp_path / "c.jpg"

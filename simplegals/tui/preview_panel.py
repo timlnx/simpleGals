@@ -172,6 +172,10 @@ class GallerySettingsPanel(urwid.WidgetWrap):
             "Generate gallery zip",
             state=bool(staged.get_current("gallery", "gallery_zip", config.gallery_zip)),
         )
+        self.simple_gals_promo_check = urwid.CheckBox(
+            "Show 'generated with simpleGals' footer",
+            state=bool(staged.get_current("gallery", "simple_gals_promo", config.simple_gals_promo)),
+        )
         save_btn = urwid.AttrMap(urwid.Button("Save", on_press=lambda _: on_save()), "button", "button_focus")
         revert_btn = urwid.AttrMap(urwid.Button("Revert", on_press=lambda _: on_revert()), "button", "button_focus")
 
@@ -239,6 +243,10 @@ class GallerySettingsPanel(urwid.WidgetWrap):
             staged.stage("gallery", "gallery_zip", config.gallery_zip, widget.state)
             _notify()
 
+        def _on_simple_gals_promo_change(widget, _old_state):
+            staged.stage("gallery", "simple_gals_promo", config.simple_gals_promo, widget.state)
+            _notify()
+
         urwid.connect_signal(self.title_field, "postchange", _on_title_change)
         urwid.connect_signal(self.desc_field, "postchange", _on_desc_change)
         urwid.connect_signal(self.quality_field, "postchange", _on_quality_change)
@@ -251,6 +259,7 @@ class GallerySettingsPanel(urwid.WidgetWrap):
         urwid.connect_signal(self.social_previews_check, "postchange", _on_social_previews_change)
         urwid.connect_signal(self.exif_display_check, "postchange", _on_exif_display_change)
         urwid.connect_signal(self.gallery_zip_check, "postchange", _on_gallery_zip_change)
+        urwid.connect_signal(self.simple_gals_promo_check, "postchange", _on_simple_gals_promo_change)
 
         pile = urwid.Pile([
             urwid.Text("Gallery Settings"),
@@ -268,6 +277,7 @@ class GallerySettingsPanel(urwid.WidgetWrap):
             self.social_previews_check,
             self.exif_display_check,
             self.gallery_zip_check,
+            self.simple_gals_promo_check,
             urwid.Divider(),
             urwid.Columns([save_btn, revert_btn]),
         ])

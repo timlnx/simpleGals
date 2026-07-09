@@ -68,6 +68,13 @@ def test_init_project_creates_stub(tmp_path):
     assert "title" in data
     assert "quality" in data
     assert "images" in data
+    assert data["simple_gals_promo"] is False
+
+
+def test_init_project_creates_in_and_out_dirs(tmp_path):
+    init_project(tmp_path)
+    assert (tmp_path / "in").is_dir()
+    assert (tmp_path / "out").is_dir()
 
 
 def test_init_project_respects_custom_path(tmp_path):

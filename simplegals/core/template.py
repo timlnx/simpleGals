@@ -69,6 +69,7 @@ def render_gallery(
         "gallery_zip_size": gallery_zip_size,
         "social_previews": config.social_previews,
         "exif_display": config.exif_display,
+        "simple_gals_promo": config.simple_gals_promo,
     }
 
     for page_num in range(1, total_pages + 1):

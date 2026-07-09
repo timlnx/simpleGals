@@ -51,6 +51,7 @@ Both commands operate in the current working directory, auto-creating `in/` (inp
 | `social_previews` | `bool` | `True` | Emit OG/Twitter tags and generate 1200px `_og` previews (in the source container: `_og.jpg` or `_og.png`) |
 | `exif_display` | `bool` | `True` | Show a camera-metadata block on item pages |
 | `gallery_zip` | `bool` | `False` | Generate a downloadable zip of full-size originals |
+| `simple_gals_promo` | `bool` | `False` | Render a "generated with simpleGals" footer link on every page (opt-in) |
 | `site_url` | `str` | `""` | Absolute base URL; enables OG image/url tags when set |
 | `quality` | `int` | `90` | JPEG output quality (0-100) |
 | `columns` | `int` | `4` | Thumbnail grid columns per page |

@@ -14,19 +14,28 @@ from PIL.ExifTags import Base, IFD
 
 
 def _shutter(value) -> str:
-    # Rationals sometimes round-trip through Pillow as a plain
-    # (numerator, denominator) tuple rather than an IFDRational, depending
-    # on how the source EXIF was encoded. Fraction() doesn't accept a raw
-    # tuple, so unpack it explicitly before falling back to the generic path.
+    # Cameras encode ExposureTime as a rational that is NOT always in lowest
+    # terms: a 1/125s exposure commonly arrives as 10/1250. Pillow surfaces it
+    # either as an IFDRational (a numbers.Rational, which Fraction() copies
+    # verbatim WITHOUT reducing, trusting it to be in lowest terms) or as a
+    # plain (numerator, denominator) tuple. In both cases we must reduce it
+    # ourselves via Fraction's two-integer constructor, which applies gcd, so
+    # the display shows 1/125s rather than 10/1250s.
+    num = den = None
     if isinstance(value, (tuple, list)) and len(value) == 2:
+        num, den = value
+    elif hasattr(value, "numerator") and hasattr(value, "denominator"):
+        num, den = value.numerator, value.denominator
+    if num is not None:
         try:
-            value = Fraction(int(value[0]), int(value[1]))
+            f = Fraction(int(num), int(den))
         except (TypeError, ValueError, ZeroDivisionError):
             return str(value)
-    try:
-        f = Fraction(value).limit_denominator(8000)
-    except (TypeError, ValueError):
-        return str(value)
+    else:
+        try:
+            f = Fraction(value).limit_denominator(8000)
+        except (TypeError, ValueError):
+            return str(value)
     if f >= 1:
         return f"{float(f):g}s"
     return f"{f.numerator}/{f.denominator}s"
@@ -88,7 +97,7 @@ def extract_exif(source: Path) -> dict | None:
     shutter = _lookup(ifd, exif, Base.ExposureTime.value)
     parts = []
     if fnum:
-        parts.append(f"f/{float(fnum):g}")
+        parts.append(f"ƒ/{float(fnum):g}")  # ƒ (LATIN SMALL LETTER F WITH HOOK)
     if iso:
         parts.append(f"ISO {int(iso)}")
     if shutter:

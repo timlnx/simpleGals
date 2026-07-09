@@ -17,6 +17,8 @@ def cmd_init(args: argparse.Namespace) -> int:
     config_path = Path(args.config) if args.config else None
     result = init_project(Path.cwd(), config_path=config_path)
     print(f"Initialized: {result}")
+    for sub in ("in", "out"):
+        print(f"  created: {Path.cwd() / sub}/")
     return 0
 
 
