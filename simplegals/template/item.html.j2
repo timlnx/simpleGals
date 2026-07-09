@@ -1,9 +1,11 @@
 {# simplegals/template/item.html.j2 #}
 <!DOCTYPE html>
+<!-- Generated with simpleGals {{ version }} | {{ project_url }} -->
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="generator" content="simpleGals {{ version }}">
   <title>{{ title }} · {{ image.filename }}</title>
   {% if social_previews %}
   <meta property="og:type" content="website">
@@ -65,7 +67,7 @@
 
     <footer>
       {% if copyright %}{{ copyright }}{% endif %}
-      {% if simple_gals_promo %}<p class="generated-by"><a href="https://github.com/timlnx/simpleGals" target="_blank" rel="noopener noreferrer">generated with simpleGals</a></p>{% endif %}
+      {% if simple_gals_promo %}<p class="generated-by"><a href="{{ project_url }}" target="_blank" rel="noopener noreferrer">Generated with simpleGals {{ version }}</a></p>{% endif %}
     </footer>
   </div>
   <div class="key-legend"><kbd>←</kbd> prev · <kbd>→</kbd> next · <kbd>u</kbd> up</div>
@@ -115,3 +117,4 @@
   </script>
 </body>
 </html>
+<!-- Generated with simpleGals {{ version }} | {{ project_url }} -->

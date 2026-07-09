@@ -5,18 +5,20 @@
   {% endif %}
 {%- endmacro -%}
 <!DOCTYPE html>
+<!-- Generated with simpleGals {{ version }} | {{ project_url }} -->
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="generator" content="simpleGals {{ version }}">
   <title>{{ title }}{% if not is_all_page and total_pages > 1 %} · Page {{ current_page }} of {{ total_pages }}{% endif %}</title>
   {% if social_previews %}
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="{{ title }}">
   <meta property="og:title" content="{{ title }}{% if not is_all_page and total_pages > 1 %} · Page {{ current_page }} of {{ total_pages }}{% endif %}">
   {% if description %}<meta property="og:description" content="{{ description }}">{% endif %}
-  {% if site_url and images and images[0].og_path %}
-  <meta property="og:image" content="{{ site_url }}/{{ images[0].og_path }}">
+  {% if site_url and cover_og_path %}
+  <meta property="og:image" content="{{ site_url }}/{{ cover_og_path }}">
   {% endif %}
   {% if site_url %}
   <meta property="og:url" content="{{ site_url }}/{% if is_all_page %}all.html{% elif current_page == 1 %}index.html{% else %}page-{{ current_page }}.html{% endif %}">
@@ -24,7 +26,7 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="{{ title }}">
   {% if description %}<meta name="twitter:description" content="{{ description }}">{% endif %}
-  {% if site_url and images and images[0].og_path %}<meta name="twitter:image" content="{{ site_url }}/{{ images[0].og_path }}">{% endif %}
+  {% if site_url and cover_og_path %}<meta name="twitter:image" content="{{ site_url }}/{{ cover_og_path }}">{% endif %}
   {% endif %}
   {% if author %}<meta name="author" content="{{ author }}">{% endif %}
   <link rel="stylesheet" href="{{ css_path }}">
@@ -80,7 +82,7 @@
 
   <footer>
     {% if copyright %}{{ copyright }}{% endif %}
-    {% if simple_gals_promo %}<p class="generated-by"><a href="https://github.com/timlnx/simpleGals" target="_blank" rel="noopener noreferrer">generated with simpleGals</a></p>{% endif %}
+    {% if simple_gals_promo %}<p class="generated-by"><a href="{{ project_url }}" target="_blank" rel="noopener noreferrer">Generated with simpleGals {{ version }}</a></p>{% endif %}
   </footer>
   {% if is_all_page %}
   <script>
@@ -100,3 +102,4 @@
   {% endif %}
 </body>
 </html>
+<!-- Generated with simpleGals {{ version }} | {{ project_url }} -->

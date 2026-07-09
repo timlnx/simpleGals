@@ -6,6 +6,7 @@ from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader
 
+from .. import PROJECT_URL, __version__
 from .config import ProjectConfig
 
 _BUILTIN_TEMPLATE_DIR = Path(__file__).parent.parent / "template"
@@ -15,6 +16,22 @@ def _get_env(config: ProjectConfig) -> tuple[Environment, Path]:
     template_dir = Path(config.template) if config.template else _BUILTIN_TEMPLATE_DIR
     env = Environment(loader=FileSystemLoader(str(template_dir)), autoescape=True)
     return env, template_dir
+
+
+def resolve_cover(cover_name: str, records: list[dict]) -> dict | None:
+    """Pick the cover record from a list of (included) image records.
+
+    cover_name is a source filename (e.g. "milkyway.jpg"). When it is empty or
+    not present among records, the first record is used. Returns None only when
+    records is empty. Callers are responsible for warning on a missing name.
+    """
+    if not records:
+        return None
+    if cover_name:
+        for r in records:
+            if r.get("filename") == cover_name:
+                return r
+    return records[0]
 
 
 def build_image_records(
@@ -49,6 +66,7 @@ def render_gallery(
     shutil.copy(css_src, css_dest)
 
     records = build_image_records(out_dir, config, raw_records)
+    cover_rec = resolve_cover(config.cover, records)
     per_page = config.layout.columns * config.layout.rows
     total_pages = max(1, ceil(len(records) / per_page))
 
@@ -70,6 +88,9 @@ def render_gallery(
         "social_previews": config.social_previews,
         "exif_display": config.exif_display,
         "simple_gals_promo": config.simple_gals_promo,
+        "version": __version__,
+        "project_url": PROJECT_URL,
+        "cover_og_path": cover_rec.get("og_path") if cover_rec else None,
     }
 
     for page_num in range(1, total_pages + 1):

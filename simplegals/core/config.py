@@ -24,6 +24,7 @@ class Layout:
 class ProjectConfig:
     title: str = "Gallery"
     description: str = ""
+    cover: str = ""
     layout: Layout = field(default_factory=Layout)
     quality: int = 90
     copyright: str = ""

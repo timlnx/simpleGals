@@ -24,7 +24,8 @@ from .metadata import (
     save_sidecar,
 )
 from .processor import og_name
-from .template import render_gallery
+from .template import render_gallery, resolve_cover
+from .. import __version__
 from ..workers.pool import dispatch
 from ..workers.progress import ProgressState, drain_queue, format_cli_progress
 
@@ -260,6 +261,26 @@ def build(
     log("Rendering HTML templates...")
     render_gallery(out_dir, config, raw_records,
                    gallery_zip=gallery_zip_ctx, gallery_zip_size=gallery_zip_size_ctx)
+
+    included_records = [r for r in raw_records if r.get("include", True)]
+    if config.cover and config.cover not in {r["filename"] for r in included_records}:
+        log(f"Cover '{config.cover}' not found among included images; using first image.")
+    cover_rec = resolve_cover(config.cover, included_records)
+    gallery_manifest = {
+        "title": config.title,
+        "description": config.description,
+        "author": config.author,
+        "slug": project_dir.name,
+        "cover": cover_rec["thumb_path"] if cover_rec else None,
+        "cover_og": cover_rec.get("og_path") if cover_rec else None,
+        "image_count": len(included_records),
+        "simplegals_version": __version__,
+        "site_url": config.site_url.rstrip("/") if config.site_url else None,
+        "built_at": now_rfc3339(),
+    }
+    (out_dir / "gallery.json").write_text(json.dumps(gallery_manifest, indent=2), encoding="utf-8")
+    log(f"Wrote gallery.json (images={gallery_manifest['image_count']}, cover={gallery_manifest['cover']})")
+
     log("Build complete.")
 
     log_path.write_text("\n".join(log_lines) + "\n", encoding="utf-8")

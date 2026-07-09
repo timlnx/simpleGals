@@ -147,6 +147,7 @@ class GallerySettingsPanel(urwid.WidgetWrap):
 
         self.title_field = urwid.Edit("Title:       ", edit_text=_v("title", config.title))
         self.desc_field = urwid.Edit("Description: ", edit_text=_v("description", config.description))
+        self.cover_field = urwid.Edit("Cover:       ", edit_text=_v("cover", config.cover))
         self.quality_field = urwid.Edit("Quality:     ", edit_text=_v("quality", config.quality))
         self.copyright_field = urwid.Edit("Copyright:   ", edit_text=_v("copyright", config.copyright))
         self.author_field = urwid.Edit("Author:      ", edit_text=_v("author", config.author))
@@ -189,6 +190,10 @@ class GallerySettingsPanel(urwid.WidgetWrap):
 
         def _on_desc_change(widget, _old):
             staged.stage("gallery", "description", config.description, widget.edit_text)
+            _notify()
+
+        def _on_cover_change(widget, _old):
+            staged.stage("gallery", "cover", config.cover, widget.edit_text)
             _notify()
 
         def _on_quality_change(widget, _old):
@@ -249,6 +254,7 @@ class GallerySettingsPanel(urwid.WidgetWrap):
 
         urwid.connect_signal(self.title_field, "postchange", _on_title_change)
         urwid.connect_signal(self.desc_field, "postchange", _on_desc_change)
+        urwid.connect_signal(self.cover_field, "postchange", _on_cover_change)
         urwid.connect_signal(self.quality_field, "postchange", _on_quality_change)
         urwid.connect_signal(self.copyright_field, "postchange", _on_copyright_change)
         urwid.connect_signal(self.author_field, "postchange", _on_author_change)
@@ -266,6 +272,8 @@ class GallerySettingsPanel(urwid.WidgetWrap):
             urwid.Divider(),
             self.title_field,
             self.desc_field,
+            self.cover_field,
+            urwid.Text("  (filename in in/ used as the gallery cover; blank = first image)"),
             self.copyright_field,
             self.author_field,
             self.site_url_field,

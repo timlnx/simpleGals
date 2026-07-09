@@ -210,10 +210,67 @@ def test_page_og_image_uses_og_path_and_gated(tmp_path):
 def test_promo_footer_hidden_by_default(tmp_path):
     out = _render(tmp_path, [_rec()])  # simple_gals_promo defaults to False
     for page in ("index.html", "a_item.html"):
-        assert "generated with simpleGals" not in (out / page).read_text(encoding="utf-8")
+        assert 'class="generated-by"' not in (out / page).read_text(encoding="utf-8")
 
 
-def test_promo_footer_shown_when_enabled(tmp_path):
+def test_promo_footer_shown_with_version_and_url(tmp_path):
     out = _render(tmp_path, [_rec()], simple_gals_promo=True)
     for page in ("index.html", "a_item.html"):
-        assert "generated with simpleGals" in (out / page).read_text(encoding="utf-8")
+        html = (out / page).read_text(encoding="utf-8")
+        assert 'class="generated-by"' in html
+        assert f"Generated with simpleGals {__version__}" in html
+        assert PROJECT_URL in html
+
+
+def test_generator_meta_present_on_every_page(tmp_path):
+    out = _render(tmp_path, [_rec()], social_previews=False, simple_gals_promo=False)
+    for page in ("index.html", "a_item.html"):
+        html = (out / page).read_text(encoding="utf-8")
+        assert f'<meta name="generator" content="simpleGals {__version__}">' in html
+
+
+def test_branding_comment_top_and_bottom(tmp_path):
+    out = _render(tmp_path, [_rec()], social_previews=False, simple_gals_promo=False)
+    marker = f"<!-- Generated with simpleGals {__version__} | {PROJECT_URL} -->"
+    for page in ("index.html", "a_item.html"):
+        html = (out / page).read_text(encoding="utf-8")
+        assert html.count(marker) == 2          # top and bottom
+        assert html.rstrip().endswith(marker)   # bottom is the last line
+
+
+from simplegals import PROJECT_URL, __version__
+from simplegals.core.template import resolve_cover
+
+
+def test_project_url_is_org_url():
+    assert PROJECT_URL == "https://github.com/simplegals/simpleGals"
+
+
+def test_resolve_cover_defaults_to_first():
+    recs = [{"filename": "a.jpg"}, {"filename": "b.jpg"}]
+    assert resolve_cover("", recs)["filename"] == "a.jpg"
+
+
+def test_resolve_cover_selects_named():
+    recs = [{"filename": "a.jpg"}, {"filename": "b.jpg"}]
+    assert resolve_cover("b.jpg", recs)["filename"] == "b.jpg"
+
+
+def test_resolve_cover_missing_falls_back_to_first():
+    recs = [{"filename": "a.jpg"}, {"filename": "b.jpg"}]
+    assert resolve_cover("ghost.jpg", recs)["filename"] == "a.jpg"
+
+
+def test_resolve_cover_empty_returns_none():
+    assert resolve_cover("x.jpg", []) is None
+
+
+def test_index_og_image_uses_cover_not_first(tmp_path):
+    recs = [
+        _rec(filename="a.jpg", og_path="a_og.jpg", thumb_path="a_thumb.jpg"),
+        _rec(filename="b.jpg", og_path="b_og.jpg", thumb_path="b_thumb.jpg"),
+    ]
+    out = _render(tmp_path, recs, social_previews=True, cover="b.jpg")
+    html = (out / "index.html").read_text(encoding="utf-8")
+    assert 'property="og:image" content="https://x.example/b_og.jpg"' in html
+    assert "a_og.jpg" not in html.split("og:image")[1][:200]

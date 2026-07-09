@@ -123,3 +123,13 @@ def test_settings_hash_ignores_display_only_toggles():
     base = settings_hash(ProjectConfig())
     assert settings_hash(ProjectConfig(exif_display=False)) == base
     assert settings_hash(ProjectConfig(gallery_zip=True)) == base
+
+
+def test_project_config_has_cover_default():
+    assert ProjectConfig().cover == ""
+
+
+def test_cover_roundtrips(tmp_path):
+    p = tmp_path / "simpleGal.json"
+    save_project_config(ProjectConfig(cover="hero.jpg"), p)
+    assert load_project_config(p).cover == "hero.jpg"

@@ -195,3 +195,46 @@ def test_build_force_rebuilds_all(tmp_project):
     log2 = log_path2.read_text(encoding="utf-8")
     assert "Force rebuild" in log2
     assert "Tasks: 0 thumb, 0 output" not in log2
+
+
+import json as _json
+from simplegals import __version__ as _sg_version
+
+
+def _read_manifest(tmp_project):
+    return _json.loads((tmp_project / "out" / "gallery.json").read_text(encoding="utf-8"))
+
+
+def test_build_writes_gallery_json(tmp_project):
+    build(tmp_project, ProjectConfig(title="Demo", author="Tim"))
+    m = _read_manifest(tmp_project)
+    assert m["title"] == "Demo"
+    assert m["author"] == "Tim"
+    assert m["slug"] == tmp_project.name
+    assert m["image_count"] == 2
+    assert m["simplegals_version"] == _sg_version
+    assert m["built_at"]
+
+
+def test_gallery_json_cover_defaults_to_first(tmp_project):
+    build(tmp_project, ProjectConfig())
+    # sorted sources: TEST.jpg precedes TEST.png
+    assert _read_manifest(tmp_project)["cover"] == "TEST_thumb.jpg"
+
+
+def test_gallery_json_cover_respects_config(tmp_project):
+    build(tmp_project, ProjectConfig(cover="TEST.png", social_previews=True))
+    m = _read_manifest(tmp_project)
+    assert m["cover"] == "TEST_thumb.png"
+    assert m["cover_og"] == "TEST_og.png"
+
+
+def test_gallery_json_cover_og_null_when_social_off(tmp_project):
+    build(tmp_project, ProjectConfig(cover="TEST.png", social_previews=False))
+    assert _read_manifest(tmp_project)["cover_og"] is None
+
+
+def test_gallery_json_warns_on_missing_cover(tmp_project):
+    log_path, _ = build(tmp_project, ProjectConfig(cover="ghost.jpg"))
+    assert "ghost.jpg" in log_path.read_text(encoding="utf-8")
+    assert _read_manifest(tmp_project)["cover"] == "TEST_thumb.jpg"  # fell back to first

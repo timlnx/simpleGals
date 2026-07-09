@@ -788,3 +788,39 @@ def test_file_panel_focus_change_resets_scroll_offset():
 def test_global_config_default_preview_delay_is_125ms():
     from simplegals.core.config import GlobalConfig
     assert GlobalConfig().preview_delay == 125
+
+
+# ── gallery cover picker ────────────────────────────────────────────────────
+
+def test_gallery_settings_panel_cover_field():
+    from simplegals.core.config import ProjectConfig
+    from simplegals.tui.preview_panel import GallerySettingsPanel
+    from simplegals.tui.state import StagedChangesModel
+    config = ProjectConfig(cover="hero.jpg")
+    staged = StagedChangesModel()
+    panel = GallerySettingsPanel(config, staged, on_save=lambda: None, on_revert=lambda: None)
+    assert panel.cover_field.edit_text == "hero.jpg"
+
+
+def test_gallery_settings_panel_cover_change_stages():
+    from simplegals.core.config import ProjectConfig
+    from simplegals.tui.preview_panel import GallerySettingsPanel
+    from simplegals.tui.state import StagedChangesModel
+    config = ProjectConfig()
+    staged = StagedChangesModel()
+    panel = GallerySettingsPanel(config, staged, on_save=lambda: None, on_revert=lambda: None)
+    panel.cover_field.set_edit_text("pick.jpg")
+    assert staged.get_current("gallery", "cover", None) == "pick.jpg"
+    assert staged.is_dirty("gallery")
+
+
+def test_gallery_settings_panel_cover_commits(tmp_path):
+    from simplegals.core.config import ProjectConfig
+    from simplegals.tui.preview_panel import GallerySettingsPanel
+    from simplegals.tui.state import StagedChangesModel
+    config = ProjectConfig()
+    staged = StagedChangesModel()
+    panel = GallerySettingsPanel(config, staged, on_save=lambda: None, on_revert=lambda: None)
+    panel.cover_field.set_edit_text("pick.jpg")
+    new_config = staged.commit_key("gallery", config, tmp_path / "simpleGal.json")
+    assert new_config.cover == "pick.jpg"
