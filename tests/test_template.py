@@ -274,3 +274,88 @@ def test_index_og_image_uses_cover_not_first(tmp_path):
     html = (out / "index.html").read_text(encoding="utf-8")
     assert 'property="og:image" content="https://x.example/b_og.jpg"' in html
     assert "a_og.jpg" not in html.split("og:image")[1][:200]
+
+
+# --- 0.4.0 template extensibility ------------------------------------------
+
+_FIXTURE_PAGE = "PAGE total={{ total_images }} {% for image in images %}{{ image.filename }} {% endfor %}"
+_FIXTURE_ITEM = "ITEM n={{ image_number }} t={{ total_images }} p={{ percent }} f={{ image.filename }}"
+
+
+def _make_template(dir_path, *, with_css, with_assets,
+                   page=_FIXTURE_PAGE, item=_FIXTURE_ITEM):
+    """Write a minimal custom template dir for render_gallery to consume."""
+    dir_path.mkdir(parents=True, exist_ok=True)
+    (dir_path / "page.html.j2").write_text(page, encoding="utf-8")
+    (dir_path / "item.html.j2").write_text(item, encoding="utf-8")
+    if with_css:
+        (dir_path / "style.css").write_text("body{}", encoding="utf-8")
+    if with_assets:
+        sub = dir_path / "assets" / "sub"
+        sub.mkdir(parents=True, exist_ok=True)
+        (dir_path / "assets" / "marker.png").write_bytes(b"PNG")
+        (sub / "note.txt").write_text("hi", encoding="utf-8")
+    return dir_path
+
+
+def test_missing_style_css_does_not_crash(tmp_path):
+    tpl = _make_template(tmp_path / "tpl", with_css=False, with_assets=False)
+    out = tmp_path / "out"
+    render_gallery(out, ProjectConfig(template=str(tpl)), _make_records(out, ["a.jpg"]))
+    assert (out / "index.html").exists()
+    assert not (out / "style.css").exists()
+
+
+def test_style_css_copied_when_present(tmp_path):
+    tpl = _make_template(tmp_path / "tpl", with_css=True, with_assets=False)
+    out = tmp_path / "out"
+    render_gallery(out, ProjectConfig(template=str(tpl)), _make_records(out, ["a.jpg"]))
+    assert (out / "style.css").exists()
+
+
+def test_template_assets_copied_recursively(tmp_path):
+    tpl = _make_template(tmp_path / "tpl", with_css=False, with_assets=True)
+    out = tmp_path / "out"
+    render_gallery(out, ProjectConfig(template=str(tpl)), _make_records(out, ["a.jpg"]))
+    assert (out / "assets" / "marker.png").exists()
+    assert (out / "assets" / "sub" / "note.txt").exists()
+
+
+def test_no_assets_dir_produces_no_output(tmp_path):
+    tpl = _make_template(tmp_path / "tpl", with_css=False, with_assets=False)
+    out = tmp_path / "out"
+    render_gallery(out, ProjectConfig(template=str(tpl)), _make_records(out, ["a.jpg"]))
+    assert not (out / "assets").exists()
+
+
+def test_assets_copy_on_rebuild_does_not_fail(tmp_path):
+    tpl = _make_template(tmp_path / "tpl", with_css=False, with_assets=True)
+    out = tmp_path / "out"
+    recs = _make_records(out, ["a.jpg"])
+    render_gallery(out, ProjectConfig(template=str(tpl)), recs)
+    render_gallery(out, ProjectConfig(template=str(tpl)), recs)  # rebuild into populated out/
+    assert (out / "assets" / "marker.png").exists()
+
+
+def test_item_position_context(tmp_path):
+    tpl = _make_template(tmp_path / "tpl", with_css=False, with_assets=False)
+    out = tmp_path / "out"
+    render_gallery(out, ProjectConfig(template=str(tpl)), _make_records(out, ["a.jpg", "b.jpg", "c.jpg"]))
+    assert "n=1 t=3 p=33" in (out / "a_item.html").read_text(encoding="utf-8")
+    assert "n=3 t=3 p=100" in (out / "c_item.html").read_text(encoding="utf-8")
+
+
+def test_percent_floor_matches_source_export(tmp_path):
+    tpl = _make_template(tmp_path / "tpl", with_css=False, with_assets=False)
+    out = tmp_path / "out"
+    names = [f"{i}.jpg" for i in range(1, 90)]  # 89 images, mirrors the retro source
+    render_gallery(out, ProjectConfig(template=str(tpl)), _make_records(out, names))
+    assert "n=1 t=89 p=1" in (out / "1_item.html").read_text(encoding="utf-8")
+    assert "n=2 t=89 p=2" in (out / "2_item.html").read_text(encoding="utf-8")
+
+
+def test_total_images_on_grid_page(tmp_path):
+    tpl = _make_template(tmp_path / "tpl", with_css=False, with_assets=False)
+    out = tmp_path / "out"
+    render_gallery(out, ProjectConfig(template=str(tpl)), _make_records(out, ["a.jpg", "b.jpg"]))
+    assert "total=2" in (out / "index.html").read_text(encoding="utf-8")

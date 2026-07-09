@@ -62,8 +62,12 @@ def render_gallery(
     env, tpl_dir = _get_env(config)
 
     css_src = tpl_dir / "style.css"
-    css_dest = out_dir / "style.css"
-    shutil.copy(css_src, css_dest)
+    if css_src.exists():
+        shutil.copy(css_src, out_dir / "style.css")
+
+    assets_src = tpl_dir / "assets"
+    if assets_src.is_dir():
+        shutil.copytree(assets_src, out_dir / "assets", dirs_exist_ok=True)
 
     records = build_image_records(out_dir, config, raw_records)
     cover_rec = resolve_cover(config.cover, records)
@@ -83,6 +87,7 @@ def render_gallery(
         "columns": config.layout.columns,
         "css_path": "style.css",
         "total_pages": total_pages,
+        "total_images": len(records),
         "gallery_zip": gallery_zip,
         "gallery_zip_size": gallery_zip_size,
         "social_previews": config.social_previews,
@@ -121,6 +126,8 @@ def render_gallery(
             "image": record,
             "prev_image": records[i - 1] if i > 0 else None,
             "next_image": records[i + 1] if i < len(records) - 1 else None,
+            "image_number": i + 1,
+            "percent": (i + 1) * 100 // len(records),
         }
         dest = out_dir / f"{stem}_item.html"
         dest.write_text(item_tpl.render(**ctx), encoding="utf-8")
