@@ -41,3 +41,15 @@ jobs:
           path: dist/
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+
+  notify-site:
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger the demo site rebuild
+        run: |
+          curl -fsS -X POST \
+            -H "Authorization: Bearer ${{ secrets.SITE_DISPATCH_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/simpleGals/simplegals.github.io/dispatches \
+            -d '{"event_type":"simplegals-release"}'
