@@ -13,6 +13,8 @@ from simplegals.core.gallery import (
 )
 from simplegals.core.metadata import load_sidecar
 from simplegals.workers.progress import ProgressState
+import json as _json
+from simplegals import __version__ as _sg_version
 
 
 def test_ensure_project_dirs_creates_directories(tmp_path):
@@ -78,7 +80,7 @@ def test_build_appends_to_jsonl(tmp_project):
     build(tmp_project, config)
     jsonl = tmp_project / ".meta" / "build.jsonl"
     assert jsonl.exists()
-    lines = [l for l in jsonl.read_text(encoding="utf-8").splitlines() if l.strip()]
+    lines = [line for line in jsonl.read_text(encoding="utf-8").splitlines() if line.strip()]
     assert len(lines) >= 1
 
 
@@ -125,7 +127,8 @@ def _proj(tmp_path):
     img = Image.new("RGB", (1200, 800), "white")
     ex = Image.Exif()
     from PIL.ExifTags import Base
-    ex[Base.Make.value] = "CANON"; ex[Base.Model.value] = "EOS R5"
+    ex[Base.Make.value] = "CANON"
+    ex[Base.Model.value] = "EOS R5"
     img.save(in_dir / "shot.jpg", exif=ex)
     return tmp_path, out_dir, meta
 
@@ -195,10 +198,6 @@ def test_build_force_rebuilds_all(tmp_project):
     log2 = log_path2.read_text(encoding="utf-8")
     assert "Force rebuild" in log2
     assert "Tasks: 0 thumb, 0 output" not in log2
-
-
-import json as _json
-from simplegals import __version__ as _sg_version
 
 
 def _read_manifest(tmp_project):

@@ -1,3 +1,5 @@
+"""Gallery ZIP archive creation and content-manifest state tracking."""
+
 from __future__ import annotations
 
 import hashlib

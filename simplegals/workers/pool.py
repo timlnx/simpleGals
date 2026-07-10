@@ -1,3 +1,5 @@
+"""Process-pool dispatch of thumbnail and output generation tasks."""
+
 from __future__ import annotations
 
 import multiprocessing
@@ -6,7 +8,6 @@ from pathlib import Path
 
 from ..core.processor import generate_sgui_thumb, generate_output
 from ..core.config import ProjectConfig
-from .progress import post_status
 
 
 def _run_thumb_task(args: tuple) -> dict:

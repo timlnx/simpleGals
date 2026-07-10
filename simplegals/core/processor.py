@@ -1,5 +1,8 @@
+"""Image processing: thumbnails, display/OG derivatives, and EXIF copyright."""
+
 from __future__ import annotations
 
+import struct
 from pathlib import Path
 
 import bitmath
@@ -32,7 +35,7 @@ def generate_sgui_thumb(source: Path, meta_dir: Path) -> Path:
     dest = meta_dir / _thumb_name(source)
     with Image.open(source) as img:
         img = ImageOps.exif_transpose(img)
-        img.thumbnail(SGUI_THUMB_MAX, Image.LANCZOS)
+        img.thumbnail(SGUI_THUMB_MAX, Image.Resampling.LANCZOS)
         img.save(dest)
     return dest
 
@@ -66,7 +69,7 @@ def generate_output(
         if bitmath.getsize(output_path) > DISPLAY_MAX_BYTES:
             display_path = out_dir / _display_name(source)
             display_img = img.copy()
-            display_img.thumbnail(DISPLAY_MAX_DIM, Image.LANCZOS)
+            display_img.thumbnail(DISPLAY_MAX_DIM, Image.Resampling.LANCZOS)
             dk: dict = {"quality": 85}
             if icc:
                 dk["icc_profile"] = icc
@@ -79,14 +82,14 @@ def generate_output(
             # Same save path as the thumb/display, so only container-applicable
             # options ride along (ICC for both; PNG keeps its alpha).
             og_img = img.copy()
-            og_img.thumbnail(OG_MAX_DIM, Image.LANCZOS)
+            og_img.thumbnail(OG_MAX_DIM, Image.Resampling.LANCZOS)
             og_kwargs: dict = {"quality": 80}
             if icc:
                 og_kwargs["icc_profile"] = icc
             og_img.save(out_dir / og_name(source), **_format_save_kwargs(source, og_kwargs))
             del og_img
 
-        img.thumbnail(HTML_THUMB_MAX, Image.LANCZOS)
+        img.thumbnail(HTML_THUMB_MAX, Image.Resampling.LANCZOS)
         img.save(thumb_path, **_format_save_kwargs(source, save_kwargs))
 
     return output_path, thumb_path, display_path
@@ -105,7 +108,7 @@ def _format_save_kwargs(source: Path, kwargs: dict) -> dict:
     return {}
 
 
-def _inject_copyright(img: Image.Image, copyright: str, source: Path) -> Image.Image:
+def _inject_copyright(img: Image.Image, copyright_text: str, source: Path) -> Image.Image:
     ext = source.suffix.lower()
     if ext not in (".jpg", ".jpeg"):
         return img
@@ -115,8 +118,10 @@ def _inject_copyright(img: Image.Image, copyright: str, source: Path) -> Image.I
             exif_dict = piexif.load(exif_bytes)
         else:
             exif_dict = {"0th": {}, "Exif": {}, "GPS": {}, "1st": {}}
-        exif_dict["0th"][piexif.ImageIFD.Copyright] = copyright.encode("utf-8")
+        exif_dict["0th"][piexif.ImageIFD.Copyright] = copyright_text.encode("utf-8")
         img.info["exif"] = piexif.dump(exif_dict)
-    except Exception:
+    except (ValueError, KeyError, struct.error):
+        # Best-effort EXIF copyright injection: piexif raises ValueError
+        # (bad/absent EXIF) or struct.error (malformed tags); skip on failure.
         pass
     return img

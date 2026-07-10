@@ -33,6 +33,7 @@ jobs:
     environment: pypi-prod
     permissions:
       id-token: write
+      contents: write   # required to attach assets to the GitHub Release
     steps:
       - name: Download dist artifacts
         uses: actions/download-artifact@v8
@@ -41,6 +42,19 @@ jobs:
           path: dist/
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+      - name: Attach release artifacts to GitHub Release
+        # The .publish.attestation files are the release provenance (what a
+        # Scorecard Signed-Releases check inspects); the publish step above
+        # generates them in dist/ alongside the wheel and sdist.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          gh release upload "$TAG" \
+            dist/simplegals-*.whl \
+            dist/simplegals-*.tar.gz \
+            dist/simplegals-*.publish.attestation \
+            --clobber --repo "$GITHUB_REPOSITORY"
 
   notify-site:
     needs: publish

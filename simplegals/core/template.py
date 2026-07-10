@@ -1,3 +1,5 @@
+"""Jinja2 rendering of gallery pages, item pages, and image records."""
+
 from __future__ import annotations
 
 import shutil
@@ -34,11 +36,7 @@ def resolve_cover(cover_name: str, records: list[dict]) -> dict | None:
     return records[0]
 
 
-def build_image_records(
-    out_dir: Path,
-    config: ProjectConfig,
-    raw_records: list[dict],
-) -> list[dict]:
+def build_image_records(raw_records: list[dict]) -> list[dict]:
     """Enrich raw image records with item_page path. Filters excluded images."""
     records = []
     for r in raw_records:
@@ -53,7 +51,6 @@ def render_gallery(
     out_dir: Path,
     config: ProjectConfig,
     raw_records: list[dict],
-    template_dir: Path | None = None,
     gallery_zip: str | None = None,
     gallery_zip_size: str | None = None,
 ) -> list[Path]:
@@ -69,7 +66,7 @@ def render_gallery(
     if assets_src.is_dir():
         shutil.copytree(assets_src, out_dir / "assets", dirs_exist_ok=True)
 
-    records = build_image_records(out_dir, config, raw_records)
+    records = build_image_records(raw_records)
     cover_rec = resolve_cover(config.cover, records)
     per_page = config.layout.columns * config.layout.rows
     total_pages = max(1, ceil(len(records) / per_page))
@@ -100,7 +97,7 @@ def render_gallery(
 
     for page_num in range(1, total_pages + 1):
         start = (page_num - 1) * per_page
-        page_images = records[start : start + per_page]
+        page_images = records[start:start + per_page]
         ctx = {
             **base_ctx,
             "images": page_images,

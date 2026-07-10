@@ -1,4 +1,4 @@
-# simplegals/tui/preview_panel.py
+"""Settings and image-preview panel shown on the right of the TUI."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -105,8 +105,14 @@ class ImageSettingsPanel(urwid.WidgetWrap):
         urwid.connect_signal(self.alt_field, "postchange", _on_alt_change)
         urwid.connect_signal(self.include_check, "postchange", _on_include_change)
 
-        orig_size = bitmath.getsize(source_path, bestprefix=True).format("{value:.2f} {unit}") if source_path and source_path.exists() else "?"
-        thumb_size = bitmath.getsize(thumb_path, bestprefix=True).format("{value:.2f} {unit}") if thumb_path and thumb_path.exists() else "(pending)"
+        orig_size = (
+            bitmath.getsize(source_path, bestprefix=True).format("{value:.2f} {unit}")
+            if source_path and source_path.exists() else "?"
+        )
+        thumb_size = (
+            bitmath.getsize(thumb_path, bestprefix=True).format("{value:.2f} {unit}")
+            if thumb_path and thumb_path.exists() else "(pending)"
+        )
         size_line = urwid.Text(f"original: {orig_size}  thumb: {thumb_size}")
 
         pile = urwid.Pile([

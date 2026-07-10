@@ -1,4 +1,4 @@
-# simplegals/tui/progress_bar.py
+"""Text-based build progress widgets for the TUI."""
 from __future__ import annotations
 
 import urwid
@@ -10,9 +10,9 @@ def _render_bar(done: int, failed: int, total: int, label: str, width: int = 20)
     filled = done + failed
     pct = filled / total if total else 0
     n_fill = round(pct * width)
-    bar = "█" * n_fill + "░" * (width - n_fill)
+    bar_str = "█" * n_fill + "░" * (width - n_fill)
     suffix = f" ({failed} err)" if failed else ""
-    return f"{label} [{bar}] {done}/{total}{suffix}"
+    return f"{label} [{bar_str}] {done}/{total}{suffix}"
 
 
 class BuildProgressWidget(urwid.Text):

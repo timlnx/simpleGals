@@ -196,7 +196,8 @@ def test_sgui_app_no_dirty_on_start(tmp_project):
 
 
 def test_sgui_help_exits_zero():
-    import subprocess, sys
+    import subprocess
+    import sys
     result = subprocess.run(
         [sys.executable, "-m", "simplegals.tui", "--help"],
         capture_output=True, text=True,

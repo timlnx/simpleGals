@@ -1,3 +1,5 @@
+"""simpleGals: a static HTML image gallery generator with a TUI setup utility."""
+
 from importlib.metadata import PackageNotFoundError, version as _version
 
 try:

@@ -1,3 +1,5 @@
+"""Image sidecar metadata models, hashing, and cache staleness checks."""
+
 from __future__ import annotations
 
 import hashlib
@@ -11,12 +13,16 @@ from .config import ProjectConfig, settings_hash as compute_settings_hash
 
 @dataclass
 class ThumbMeta:
+    """Cached thumbnail location and its generation timestamp."""
+
     path: str
     generated_at: str
 
 
 @dataclass
 class OutputMeta:
+    """Generated full-size output and thumbnail paths with a timestamp."""
+
     path: str
     thumb_path: str
     generated_at: str
@@ -24,12 +30,16 @@ class OutputMeta:
 
 @dataclass
 class OgMeta:
+    """Generated social-preview (_og) image location and timestamp."""
+
     path: str
     generated_at: str
 
 
 @dataclass
 class ImageSidecar:
+    """Per-source cache record: hashes, settings hash, and output metadata."""
+
     source: str
     mtime: str
     sha256: str

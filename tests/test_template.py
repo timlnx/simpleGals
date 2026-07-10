@@ -1,8 +1,9 @@
 import shutil
 from pathlib import Path
 import pytest
+from simplegals import PROJECT_URL, __version__
 from simplegals.core.config import Layout, ProjectConfig
-from simplegals.core.template import build_image_records, render_gallery
+from simplegals.core.template import build_image_records, render_gallery, resolve_cover
 
 
 def _make_output_images(out_dir: Path, names: list[str]) -> list[Path]:
@@ -166,7 +167,11 @@ def test_social_tags_suppressed_when_disabled(tmp_path):
 
 
 def test_exif_block_renders_present_fields_only(tmp_path):
-    out = _render(tmp_path, [_rec(exif={"camera": "CANON EOS R5", "exposure": "ƒ/2.8 · ISO 100 · 1/250s"})], exif_display=True)
+    out = _render(
+        tmp_path,
+        [_rec(exif={"camera": "CANON EOS R5", "exposure": "ƒ/2.8 · ISO 100 · 1/250s"})],
+        exif_display=True,
+    )
     html = (out / "a_item.html").read_text(encoding="utf-8")
     assert "CANON EOS R5" in html and "class=\"exif\"" in html
     assert "White balance" not in html   # absent field must not appear
@@ -178,7 +183,8 @@ def test_exif_block_hidden_without_exif(tmp_path):
 
 
 def test_download_button_on_index_and_all(tmp_path):
-    out = tmp_path / "out"; out.mkdir()
+    out = tmp_path / "out"
+    out.mkdir()
     render_gallery(out, ProjectConfig(gallery_zip=True), [_rec()],
                    gallery_zip="My_Gallery.zip", gallery_zip_size="3 MiB")
     for page in ("index.html", "all.html"):
@@ -188,7 +194,8 @@ def test_download_button_on_index_and_all(tmp_path):
 
 
 def test_no_download_button_without_zip(tmp_path):
-    out = tmp_path / "out"; out.mkdir()
+    out = tmp_path / "out"
+    out.mkdir()
     render_gallery(out, ProjectConfig(), [_rec()])
     assert "download-btn" not in (out / "index.html").read_text(encoding="utf-8")
 
@@ -236,10 +243,6 @@ def test_branding_comment_top_and_bottom(tmp_path):
         html = (out / page).read_text(encoding="utf-8")
         assert html.count(marker) == 2          # top and bottom
         assert html.rstrip().endswith(marker)   # bottom is the last line
-
-
-from simplegals import PROJECT_URL, __version__
-from simplegals.core.template import resolve_cover
 
 
 def test_project_url_is_org_url():
