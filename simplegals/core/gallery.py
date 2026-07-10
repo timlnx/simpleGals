@@ -1,9 +1,10 @@
+"""Gallery build orchestration: scanning, caching, dispatch, and output."""
+
 from __future__ import annotations
 
 import json
 import multiprocessing
 import threading
-from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -250,7 +251,8 @@ def build(
             archive.save_zip_state(meta_dir, {
                 "manifest": manifest, "zip": zip_name, "size": size, "count": count,
             })
-            log(f"Zipped {count} images -> {zip_name} ({bitmath.Byte(size).best_prefix().format('{value:.0f} {unit}')})")
+            zipped_size = bitmath.Byte(size).best_prefix().format("{value:.0f} {unit}")
+            log(f"Zipped {count} images -> {zip_name} ({zipped_size})")
         else:
             size = zip_state["size"]
             count = zip_state["count"]

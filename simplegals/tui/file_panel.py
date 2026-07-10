@@ -1,4 +1,4 @@
-# simplegals/tui/file_panel.py
+"""Scrollable file-list widget with dirty markers and marquee scrolling."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -60,13 +60,14 @@ class FilePanel(urwid.WidgetWrap):
         self,
         sources: list[Path],
         dirty_filenames: set[str],
-        excluded_filenames: set[str] = set(),
+        excluded_filenames: set[str] | None = None,
         on_selection_change: Callable[[str], None] | None = None,
         on_enter: Callable[[str | None], None] | None = None,
         on_toggle_include: Callable[[str | None], None] | None = None,
         loop: Any | None = None,
         scroll_rate: float = 2.0,
     ) -> None:
+        excluded_filenames = excluded_filenames or set()
         self._sources = sources
         self._on_selection_change = on_selection_change
         self._on_enter = on_enter
@@ -142,8 +143,10 @@ class FilePanel(urwid.WidgetWrap):
         delay = 1.0 / self._scroll_rate if self._scroll_rate > 0 else 0.5
         self._scroll_alarm = loop.set_alarm_in(delay, self._tick_scroll)
 
-    def reload(self, sources: list[Path], dirty_filenames: set[str], excluded_filenames: set[str] = set()) -> None:
+    def reload(self, sources: list[Path], dirty_filenames: set[str],
+               excluded_filenames: set[str] | None = None) -> None:
         self._cancel_scroll()
+        excluded_filenames = excluded_filenames or set()
         self._sources = sources
         self._rows = [
             SelectableImageRow(s.name, dirty=s.name in dirty_filenames, excluded=s.name in excluded_filenames)

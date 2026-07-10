@@ -1,14 +1,19 @@
+"""Global and per-project configuration models and their JSON persistence."""
+
 from __future__ import annotations
 
 import hashlib
 import json
+import os
 import platform
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, fields as dataclass_fields
 from pathlib import Path
 
 
 @dataclass
 class GlobalConfig:
+    """User-level settings stored in the platform config directory."""
+
     file_panel_width: int | str = 30
     scroll_rate: float = 2.0
     preview_delay: int = 125
@@ -16,12 +21,16 @@ class GlobalConfig:
 
 @dataclass
 class Layout:
+    """Thumbnail grid dimensions (columns x rows per page)."""
+
     columns: int = 4
     rows: int = 5
 
 
 @dataclass
 class ProjectConfig:
+    """Per-gallery settings persisted in simpleGal.json."""
+
     title: str = "Gallery"
     description: str = ""
     cover: str = ""
@@ -43,10 +52,8 @@ def global_config_path() -> Path:
     if system == "Darwin":
         return Path.home() / "Library" / "Application Support" / "simplegals" / "config.json"
     if system == "Windows":
-        import os
         appdata = os.environ.get("APPDATA", str(Path.home()))
         return Path(appdata) / "simplegals" / "config.json"
-    import os
     xdg = os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config"))
     return Path(xdg) / "simplegals" / "config.json"
 
@@ -56,7 +63,8 @@ def load_global_config(path: Path | None = None) -> GlobalConfig:
     if not p.exists():
         return GlobalConfig()
     data = json.loads(p.read_text(encoding="utf-8"))
-    return GlobalConfig(**{k: v for k, v in data.items() if k in GlobalConfig.__dataclass_fields__})
+    valid = {f.name for f in dataclass_fields(GlobalConfig)}
+    return GlobalConfig(**{k: v for k, v in data.items() if k in valid})
 
 
 def save_global_config(config: GlobalConfig, path: Path | None = None) -> None:
@@ -70,8 +78,10 @@ def load_project_config(path: Path) -> ProjectConfig:
         raise FileNotFoundError(f"Config not found: {path}")
     data = json.loads(path.read_text(encoding="utf-8"))
     layout_data = data.pop("layout", {})
-    layout = Layout(**{k: v for k, v in layout_data.items() if k in Layout.__dataclass_fields__})
-    fields = {k: v for k, v in data.items() if k in ProjectConfig.__dataclass_fields__}
+    layout_fields = {f.name for f in dataclass_fields(Layout)}
+    layout = Layout(**{k: v for k, v in layout_data.items() if k in layout_fields})
+    project_fields = {f.name for f in dataclass_fields(ProjectConfig)}
+    fields = {k: v for k, v in data.items() if k in project_fields}
     fields["layout"] = layout
     return ProjectConfig(**fields)
 

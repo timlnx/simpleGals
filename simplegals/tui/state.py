@@ -1,4 +1,4 @@
-# simplegals/tui/state.py
+"""Staging state tracking for pending, unsaved edits in the TUI."""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -10,6 +10,8 @@ from ..core.config import Layout, ProjectConfig, save_project_config
 
 @dataclass
 class StagedValue:
+    """A pending edit: its original value and the staged new value."""
+
     original: Any
     new: Any
 

@@ -1,4 +1,4 @@
-# simplegals/tui/app.py
+"""The sgui application: split-pane file tree, settings, and preview."""
 from __future__ import annotations
 
 import os
@@ -115,7 +115,7 @@ class SGUIApp:
         self._pipe = self._loop.watch_pipe(self._on_pipe_data)
         self._file_panel._loop = self._loop
 
-        def _sigint(signum, frame):
+        def _sigint(_signum, _frame):
             if self._pipe is not None:
                 try:
                     os.write(self._pipe, b"\x03")

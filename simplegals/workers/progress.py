@@ -1,3 +1,5 @@
+"""Progress state model and helpers shared by the CLI and TUI build runs."""
+
 from __future__ import annotations
 
 import multiprocessing
@@ -8,6 +10,8 @@ from datetime import datetime, timezone
 
 @dataclass
 class ProgressState:
+    """Mutable counters tracking thumbnail, output, and zip progress."""
+
     thumb_total: int = 0
     thumb_done: int = 0
     thumb_failed: int = 0
@@ -60,7 +64,7 @@ def drain_queue(
 
 
 def format_cli_progress(state: ProgressState) -> str:
-    def bar(done: int, failed: int, total: int, label: str) -> str:
+    def _render_bar(done: int, failed: int, total: int, label: str) -> str:
         filled = done + failed
         pct = filled / total if total else 0
         width = 20
@@ -69,9 +73,9 @@ def format_cli_progress(state: ProgressState) -> str:
         return f"{label} [{b}] {done}/{total}" + (f" ({failed} err)" if failed else "")
 
     lines = [
-        bar(state.thumb_done, state.thumb_failed, state.thumb_total, "Previews"),
-        bar(state.output_done, state.output_failed, state.output_total, "Output "),
+        _render_bar(state.thumb_done, state.thumb_failed, state.thumb_total, "Previews"),
+        _render_bar(state.output_done, state.output_failed, state.output_total, "Output "),
     ]
     if state.zip_total:
-        lines.append(bar(state.zip_done, 0, state.zip_total, "Zip    "))
+        lines.append(_render_bar(state.zip_done, 0, state.zip_total, "Zip    "))
     return "\n".join(lines)

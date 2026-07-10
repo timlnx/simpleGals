@@ -1,3 +1,5 @@
+"""Command-line entry point for simpleGals (init/validate/build/clean)."""
+
 from __future__ import annotations
 
 import argparse
@@ -71,7 +73,7 @@ def cmd_build(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_clean(args: argparse.Namespace) -> int:
+def cmd_clean(_args: argparse.Namespace) -> int:
     clean(Path.cwd())
     print("Cleaned .meta/")
     return 0

@@ -1,3 +1,5 @@
+"""Interactive TUI (sgui) package for configuring and building galleries."""
+
 from __future__ import annotations
 
 import argparse
